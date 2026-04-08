@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mark-bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="1" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="mark-stroke" x1="168" y1="168" x2="356" y2="348" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FACC15"/>
+      <stop offset="1" stop-color="#FB923C"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="48" y="48" width="416" height="416" rx="104" fill="url(#mark-bg)"/>
+
+  <path d="M168 152C205.5 152 232.5 162.5 256 180C279.5 162.5 306.5 152 344 152V336C306.5 336 279.5 347 256 368C232.5 347 205.5 336 168 336V152Z" fill="white" fill-opacity="0.94"/>
+
+  <path d="M256 180V368" stroke="#FED7AA" stroke-width="12" stroke-linecap="round"/>
+  <path d="M190 214H232" stroke="#FDBA74" stroke-width="10" stroke-linecap="round"/>
+  <path d="M280 214H322" stroke="#FDBA74" stroke-width="10" stroke-linecap="round"/>
+  <path d="M190 252H232" stroke="#FDBA74" stroke-width="10" stroke-linecap="round"/>
+  <path d="M280 252H322" stroke="#FDBA74" stroke-width="10" stroke-linecap="round"/>
+
+  <path d="M186 356C224 320 289 308 334 338" stroke="url(#mark-stroke)" stroke-width="16" stroke-linecap="round"/>
+</svg>

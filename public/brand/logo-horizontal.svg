@@ -1,0 +1,28 @@
+<svg width="860" height="220" viewBox="0 0 860 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="h-bg" x1="18" y1="14" x2="186" y2="206" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="1" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="h-accent" x1="70" y1="68" x2="142" y2="154" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDBA74"/>
+      <stop offset="1" stop-color="#FB923C"/>
+    </linearGradient>
+    <linearGradient id="h-word" x1="232" y1="52" x2="602" y2="172" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EA580C"/>
+      <stop offset="1" stop-color="#9A3412"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="12" y="12" width="184" height="184" rx="44" fill="url(#h-bg)"/>
+  <path d="M66 56C82.5 56 95 60.5 104 68.5C113 60.5 125.5 56 142 56V142C125.5 142 113 147 104 156C95 147 82.5 142 66 142V56Z" fill="white" fill-opacity="0.95"/>
+  <path d="M104 68.5V156" stroke="#FED7AA" stroke-width="6" stroke-linecap="round"/>
+  <path d="M76 84H94" stroke="#FDBA74" stroke-width="5" stroke-linecap="round"/>
+  <path d="M114 84H132" stroke="#FDBA74" stroke-width="5" stroke-linecap="round"/>
+  <path d="M76 102H94" stroke="#FDBA74" stroke-width="5" stroke-linecap="round"/>
+  <path d="M114 102H132" stroke="#FDBA74" stroke-width="5" stroke-linecap="round"/>
+  <path d="M74 150C91 134 120 129 140 141" stroke="url(#h-accent)" stroke-width="7" stroke-linecap="round"/>
+
+  <text x="232" y="113" fill="url(#h-word)" style="font: 800 76px Manrope, 'Segoe UI', sans-serif; letter-spacing: -1.4px;">OpenHSK</text>
+  <text x="236" y="154" fill="#7C2D12" style="font: 600 24px Manrope, 'Segoe UI', sans-serif; letter-spacing: 0.8px;">Open Chinese Learning Platform</text>
+</svg>

@@ -1,0 +1,32 @@
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/brand/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/brand/icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/brand/illustrations/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/brand/backgrounds/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/brand/patterns/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/hsk3.0.json
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/dictionary.txt
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/graphics.txt
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/workbox-*.js
+  Cache-Control: public, max-age=0, must-revalidate

@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 24 100% 97%;
+    --foreground: 217 32% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 32% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 32% 17%;
+    --primary: 10 65% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 12 85% 94%;
+    --secondary-foreground: 20 74% 28%;
+    --muted: 20 45% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 15 88% 94%;
+    --accent-foreground: 20 74% 28%;
+    --destructive: 0 70% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 21 38% 86%;
+    --input: 21 38% 86%;
+    --ring: 12 67% 55%;
+    --radius: 0.625rem;
+    --sidebar-background: 20 67% 97%;
+    --sidebar-foreground: 217 32% 17%;
+    --sidebar-primary: 10 65% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 12 85% 94%;
+    --sidebar-accent-foreground: 20 74% 28%;
+    --sidebar-border: 21 38% 86%;
+    --sidebar-ring: 12 67% 55%;
+  }
+
+  .dark {
+    --background: 221 39% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 35% 16%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 35% 16%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 12 67% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 27% 22%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 29% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 10 32% 22%;
+    --accent-foreground: 22 100% 96%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 23% 22%;
+    --input: 220 23% 22%;
+    --ring: 12 67% 55%;
+    --sidebar-background: 221 39% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 12 67% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 27% 22%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 220 23% 22%;
+    --sidebar-ring: 12 67% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Segoe UI Variable Text', 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-brand {
+    font-family: 'Segoe UI Variable Display', 'Segoe UI', 'Noto Sans SC', sans-serif;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+
+  .font-cn {
+    font-family: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', sans-serif;
+  }
+}

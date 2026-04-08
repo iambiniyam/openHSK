@@ -1,0 +1,13 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pen-grad" x1="20" y1="18" x2="76" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="1" stop-color="#9A3412"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="84" height="84" rx="20" fill="#FFF7ED"/>
+  <path d="M68 24L74 30L43 61L31 65L35 53L68 24Z" fill="url(#pen-grad)"/>
+  <path d="M33 63L29 68L21 76L27 75L31 71L35 66" stroke="#FDBA74" stroke-width="3" stroke-linecap="round"/>
+  <path d="M18 56C24 49 30 45 37 42" stroke="#EA580C" stroke-width="4" stroke-linecap="round"/>
+  <path d="M20 66C27 59 36 54 45 51" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+</svg>

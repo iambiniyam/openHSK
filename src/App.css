@@ -1,0 +1,397 @@
+/* OpenHSK - Modern Chinese Learning App Styles */
+
+/* CSS Variables */
+:root {
+  --hsk-1: #22c55e;
+  --hsk-2: #3b82f6;
+  --hsk-3: #eab308;
+  --hsk-4: #f97316;
+  --hsk-5: #a855f7;
+  --hsk-6: #ec4899;
+}
+
+.brand-atmosphere {
+  background:
+    radial-gradient(1100px circle at 0% 0%, hsl(var(--primary) / 0.12), transparent 44%),
+    radial-gradient(900px circle at 100% 0%, hsl(var(--primary) / 0.08), transparent 36%),
+    hsl(var(--background));
+}
+
+.dark .brand-atmosphere {
+  background:
+    radial-gradient(1000px circle at 0% 0%, hsl(var(--primary) / 0.2), transparent 40%),
+    radial-gradient(750px circle at 100% 0%, hsl(var(--accent) / 0.35), transparent 30%),
+    hsl(var(--background));
+}
+
+/* HSK Level Badges */
+.hsk-badge-1 {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+  border-color: #22c55e !important;
+}
+
+.hsk-badge-2 {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #3b82f6 !important;
+}
+
+.hsk-badge-3 {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #eab308 !important;
+}
+
+.hsk-badge-4 {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+  border-color: #f97316 !important;
+}
+
+.hsk-badge-5 {
+  background-color: #f3e8ff !important;
+  color: #6b21a8 !important;
+  border-color: #a855f7 !important;
+}
+
+.hsk-badge-6 {
+  background-color: #fce7f3 !important;
+  color: #9d174d !important;
+  border-color: #ec4899 !important;
+}
+
+.hsk-badge-7 {
+  background: linear-gradient(135deg, #fef3c7 0%, #fce7f3 100%) !important;
+  color: #7c2d12 !important;
+  border-color: #f59e0b !important;
+}
+
+/* Dark mode HSK badges */
+.dark .hsk-badge-1 {
+  background-color: #166534 !important;
+  color: #dcfce7 !important;
+}
+
+.dark .hsk-badge-2 {
+  background-color: #1e40af !important;
+  color: #dbeafe !important;
+}
+
+.dark .hsk-badge-3 {
+  background-color: #92400e !important;
+  color: #fef3c7 !important;
+}
+
+.dark .hsk-badge-4 {
+  background-color: #9a3412 !important;
+  color: #ffedd5 !important;
+}
+
+.dark .hsk-badge-5 {
+  background-color: #6b21a8 !important;
+  color: #f3e8ff !important;
+}
+
+.dark .hsk-badge-6 {
+  background-color: #9d174d !important;
+  color: #fce7f3 !important;
+}
+
+.dark .hsk-badge-7 {
+  background: linear-gradient(135deg, #92400e 0%, #9d174d 100%) !important;
+  color: #fef3c7 !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Thin scrollbar for lists */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+}
+
+/* Stroke Animation */
+@keyframes stroke-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.stroke-animate {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: stroke-draw 1s ease-out forwards;
+}
+
+/* Tone Colors */
+.tone-1 { color: #ef4444; }
+.tone-2 { color: #f97316; }
+.tone-3 { color: #22c55e; }
+.tone-4 { color: #3b82f6; }
+.tone-5 { color: #6b7280; }
+
+/* Selection */
+::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary-foreground));
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+/* Character grid background */
+.char-grid {
+  background-image: 
+    linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+  background-size: 50% 50%;
+}
+
+/* Safe area for mobile */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Animation utilities */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass {
+  background: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Loading shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.1) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Word card styles */
+.word-card {
+  transition: all 0.2s ease;
+}
+
+.word-card:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 4px 12px -2px hsl(var(--primary) / 0.1);
+}
+
+/* Graph styles */
+.graph-node {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.graph-node:hover circle {
+  filter: brightness(1.1);
+  transform: scale(1.05);
+}
+
+/* Overflow safety for dynamic dictionary content */
+.word-safe {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.no-overflow {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.graph-link {
+  stroke-opacity: 0.4;
+  transition: stroke-opacity 0.2s;
+}
+
+.graph-link:hover {
+  stroke-opacity: 0.8;
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+  .text-responsive-xl {
+    font-size: 2.5rem;
+  }
+  
+  .text-responsive-lg {
+    font-size: 1.75rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  display: -webkit-box;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Break words */
+.break-words {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Pagination styles */
+.pagination-btn {
+  min-width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Card grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* Responsive card grid */
+@media (max-width: 640px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Animation for new elements */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
