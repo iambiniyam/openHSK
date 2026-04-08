@@ -11,7 +11,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:pages": "wrangler pages deploy dist --project-name openhsk",
+    "deploy:pages:prod": "wrangler pages deploy dist --project-name openhsk --branch main"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -85,6 +87,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "wrangler": "^4.81.0"
   }
 }

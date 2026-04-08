@@ -25,6 +25,8 @@ npm run lint
 - Build command: `npm run build`
 - Output directory: `dist`
 - Runtime: Node.js `20.x` or newer
+- Deploy command (if manually configured): `npm run deploy:pages:prod`
+- Do not use: `wrangler deploy`
 
 ## Data Files
 
