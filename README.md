@@ -30,6 +30,8 @@ npm run lint
 
 ## Data Files
 
-- `public/hsk3.0.json`
+- `public/hsk3.0.part1.json`
+- `public/hsk3.0.part2.json`
 - `public/dictionary.txt`
-- `public/graphics.txt`
+- `public/graphics.part1.txt`
+- `public/graphics.part2.txt`

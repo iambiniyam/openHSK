@@ -1,6 +1,9 @@
 // MakeMeAHanzi Service - Provides accurate stroke order and character decomposition
 // Data from https://github.com/skishore/makemeahanzi
 
+import { loadGraphicsDatasetText } from '@/lib/datasetLoader';
+import { fetchWithCacheFallback } from '@/lib/offlineFetch';
+
 export interface HanziCharacter {
   character: string;
   definition?: string;
@@ -31,14 +34,12 @@ class MakeMeAHanziService {
     if (this.loaded) return;
     
     try {
-      // Load dictionary data
-      const dictResponse = await fetch('/dictionary.txt');
-      const dictText = await dictResponse.text();
-      this.parseDictionary(dictText);
+      const [dictText, graphicsText] = await Promise.all([
+        fetchWithCacheFallback('/dictionary.txt').then((response) => response.text()),
+        loadGraphicsDatasetText(),
+      ]);
 
-      // Load graphics data
-      const graphicsResponse = await fetch('/graphics.txt');
-      const graphicsText = await graphicsResponse.text();
+      this.parseDictionary(dictText);
       this.parseGraphics(graphicsText);
 
       this.loaded = true;

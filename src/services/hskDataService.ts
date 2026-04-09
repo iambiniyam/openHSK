@@ -1,5 +1,5 @@
 import type { HSKEntry, StudyProgress, UserStats } from '@/types/hsk';
-import { fetchWithCacheFallback } from '@/lib/offlineFetch';
+import { loadHskDataset } from '@/lib/datasetLoader';
 
 export interface DailyStats {
   date: string;
@@ -32,8 +32,7 @@ class HSKDataService {
 
   async loadData(): Promise<void> {
     try {
-      const response = await fetchWithCacheFallback('/hsk3.0.json');
-      this.data = await response.json();
+      this.data = await loadHskDataset<HSKEntry>();
       this.loadProgressFromStorage();
       this.calculateLevelProgress();
       this.checkAndResetDailyStats();

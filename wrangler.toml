@@ -1,3 +1,7 @@
 name = "openhsk"
 compatibility_date = "2026-04-08"
 pages_build_output_dir = "dist"
+
+[assets]
+# Keep a static-assets fallback so accidental `wrangler deploy` commands do not fail on missing entrypoints.
+directory = "./dist"

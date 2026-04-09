@@ -1,5 +1,6 @@
 import type { HSKEntry } from '@/types/hsk';
 import { fetchWithCacheFallback } from '@/lib/offlineFetch';
+import { loadGraphicsDatasetText, loadHskDataset } from '@/lib/datasetLoader';
 
 // Unified Dictionary Entry - combines HSK + makemeahanzi + additional data
 export interface UnifiedEntry {
@@ -110,17 +111,10 @@ class UnifiedDictionaryService {
     console.time('Dictionary Load');
     
     try {
-      // Load all large datasets in parallel and fallback to cache when offline.
-      const [hskResponse, dictResponse, graphicsResponse] = await Promise.all([
-        fetchWithCacheFallback('/hsk3.0.json'),
-        fetchWithCacheFallback('/dictionary.txt'),
-        fetchWithCacheFallback('/graphics.txt'),
-      ]);
-
       const [hskData, dictText, graphicsText] = await Promise.all([
-        hskResponse.json() as Promise<HSKEntry[]>,
-        dictResponse.text(),
-        graphicsResponse.text(),
+        loadHskDataset<HSKEntry>(),
+        fetchWithCacheFallback('/dictionary.txt').then((response) => response.text()),
+        loadGraphicsDatasetText(),
       ]);
 
       this.hskData = hskData;

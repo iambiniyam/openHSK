@@ -38,12 +38,12 @@ export default defineConfig(() => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,json,txt,woff2}'],
-        globIgnores: ['**/hsk3.0.json', '**/dictionary.txt', '**/graphics.txt', '**/cedict.txt.gz'],
+        globIgnores: ['**/hsk3.0*.json', '**/dictionary.txt', '**/graphics*.txt', '**/cedict.txt.gz'],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => /\/(hsk3\.0\.json|dictionary\.txt|graphics\.txt)$/.test(url.pathname),
+            urlPattern: ({ url }) => /\/(hsk3\.0(?:\.part\d+)?\.json|dictionary\.txt|graphics(?:\.part\d+)?\.txt)$/.test(url.pathname),
             handler: 'CacheFirst',
             options: {
               cacheName: 'openhsk-dataset-cache',

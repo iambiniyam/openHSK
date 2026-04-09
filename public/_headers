@@ -16,13 +16,13 @@
 /brand/patterns/*
   Cache-Control: public, max-age=31536000, immutable
 
-/hsk3.0.json
+/hsk3.0*.json
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /dictionary.txt
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-/graphics.txt
+/graphics*.txt
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /sw.js
