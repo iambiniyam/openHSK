@@ -3,9 +3,7 @@ node_modules/
 
 # Build output
 dist/
-
-# Vercel
-.vercel/
+tmp/
 
 # Logs
 npm-debug.log*

@@ -381,7 +381,10 @@ export const WordGraph = ({
 
     node.filter((d: GraphNode) => d.type !== 'center')
       .append('text')
-      .text((d: GraphNode) => d.type === 'family' ? 'fam' : d.type)
+      .text((d: GraphNode) => {
+        if (d.type === 'family') return 'fam';
+        return d.type;
+      })
       .attr('text-anchor', 'middle')
       .attr('y', (d: GraphNode) => d.type === 'center' ? 51 : 39)
       .attr('font-size', '9px')

@@ -12,6 +12,8 @@ import {
   BookOpen, 
   Lightbulb, 
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
   GitBranch,
   MessageCircle,
   Layers,
@@ -29,13 +31,23 @@ interface WordDetailProps {
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onRelatedWordClick: (entry: UnifiedEntry) => void;
+  canGoPrevious?: boolean;
+  canGoNext?: boolean;
+  onGoPrevious?: () => void;
+  onGoNext?: () => void;
+  navigationLabel?: string;
 }
 
 export const WordDetail = ({ 
   entry, 
   isFavorite, 
   onToggleFavorite,
-  onRelatedWordClick 
+  onRelatedWordClick,
+  canGoPrevious = false,
+  canGoNext = false,
+  onGoPrevious,
+  onGoNext,
+  navigationLabel,
 }: WordDetailProps) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedOverviewChar, setSelectedOverviewChar] = useState(0);
@@ -47,6 +59,32 @@ export const WordDetail = ({
     () => unifiedDictionary.getRelatedEntries(entry.hanzi),
     [entry.hanzi]
   );
+  const etymologyNarrative = useMemo(() => {
+    if (!entry.characterBreakdown || entry.characterBreakdown.length < 2) {
+      return '';
+    }
+
+    const pieces = entry.characterBreakdown
+      .map((char) => {
+        const clue =
+          char.etymology?.semantic ||
+          char.etymology?.hint ||
+          char.definition ||
+          '';
+        if (!clue) {
+          return char.char;
+        }
+
+        return `${char.char} (${clue.replace(/\s+/g, ' ').trim()})`;
+      })
+      .slice(0, 4);
+
+    if (pieces.length < 2) {
+      return '';
+    }
+
+    return `${entry.hanzi} combines ${pieces.join(' + ')} into a compound used in modern HSK contexts.`;
+  }, [entry.characterBreakdown, entry.hanzi]);
 
   const speak = (text: string) => {
     ttsService.speak(text);
@@ -127,18 +165,48 @@ export const WordDetail = ({
               </div>
               
               {/* Actions */}
-              <div className="flex gap-2 flex-shrink-0">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={onToggleFavorite}
-                  className={isFavorite ? 'bg-red-50 border-red-200' : ''}
-                >
-                  <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-                </Button>
-                <Button variant="outline" size="icon">
-                  <Share2 className="w-5 h-5" />
-                </Button>
+              <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onToggleFavorite}
+                    className={isFavorite ? 'bg-red-50 border-red-200' : ''}
+                  >
+                    <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                  </Button>
+                  <Button variant="outline" size="icon">
+                    <Share2 className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {(onGoPrevious || onGoNext) && (
+                  <div className="flex flex-col items-end gap-1">
+                    {navigationLabel && (
+                      <span className="text-xs text-muted-foreground">{navigationLabel}</span>
+                    )}
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onGoPrevious}
+                        disabled={!canGoPrevious}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onGoNext}
+                        disabled={!canGoNext}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -459,6 +527,23 @@ export const WordDetail = ({
                     <Badge variant="outline" className="mt-2 capitalize">
                       {example.difficulty}
                     </Badge>
+                    {example.source && (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Source:{' '}
+                        {example.sourceUrl ? (
+                          <a
+                            href={example.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline hover:text-primary"
+                          >
+                            {example.source}
+                          </a>
+                        ) : (
+                          example.source
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 ))
               ) : (
@@ -563,6 +648,12 @@ export const WordDetail = ({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {etymologyNarrative && (
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <p className="text-sm break-words">{etymologyNarrative}</p>
+                    </div>
+                  )}
+
                   {entry.characterBreakdown.map((char) => (
                     char.etymology && (
                       <div key={char.char} className="border rounded-lg p-4">

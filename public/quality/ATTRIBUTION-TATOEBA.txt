@@ -1,0 +1,8 @@
+Data source: Tatoeba
+Website: https://tatoeba.org/
+Downloads: https://downloads.tatoeba.org/exports/per_language/
+Terms: https://tatoeba.org/en/terms_of_use
+License note: Sentence licenses are managed per sentence in Tatoeba (default is CC BY 2.0 FR).
+Attribution note: Keep sentence IDs and source links to preserve attribution traceability.
+
+This generated file stores sentence IDs and source links for educational reuse in OpenHSK.

@@ -25,11 +25,10 @@ import {
   Filter,
   X,
   LayoutGrid,
-  List,
-  Info
+  List
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,6 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { unifiedDictionary, type UnifiedEntry } from '@/services/unifiedDictionaryService';
 import { hskDataService } from '@/services/hskDataService';
 import { ttsService } from '@/services/ttsService';
+import { scheduleRuntimeWarmup } from '@/lib/runtimeWarmup';
 import type { UserStats } from '@/types/hsk';
 
 import './App.css';
@@ -83,6 +83,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<UnifiedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnifiedEntry | null>(null);
+  const [detailSequence, setDetailSequence] = useState<UnifiedEntry[]>([]);
+  const [detailReturnView, setDetailReturnView] = useState<ViewMode>('browse');
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -105,7 +107,6 @@ function App() {
   });
   const [dueCount, setDueCount] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [dataCoverage, setDataCoverage] = useState<ReturnType<typeof unifiedDictionary.getDataCoverage> | null>(null);
   
   // Study mode
   const [studyEntries, setStudyEntries] = useState<UnifiedEntry[]>([]);
@@ -124,8 +125,7 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        await unifiedDictionary.initialize();
-        await hskDataService.loadData();
+        await Promise.all([unifiedDictionary.initialize(), hskDataService.loadData()]);
         
         const allEntries = unifiedDictionary.getAllEntries();
         setEntries(allEntries);
@@ -136,7 +136,6 @@ function App() {
         setDueCount(hskDataService.getDueReviews().length);
         setFavorites(hskDataService.getFavorites());
         setDailyStats(hskDataService.getDailyStats());
-        setDataCoverage(unifiedDictionary.getDataCoverage());
         
         setLoading(false);
       } catch (error) {
@@ -146,6 +145,11 @@ function App() {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    return scheduleRuntimeWarmup();
+  }, [loading]);
 
   // Dark mode
   useEffect(() => {
@@ -230,6 +234,23 @@ function App() {
     setDueCount(hskDataService.getDueReviews().length);
     setDailyStats(hskDataService.getDailyStats());
   }, []);
+
+  const openDetailView = useCallback(
+    (
+      entry: UnifiedEntry,
+      options?: {
+        sequence?: UnifiedEntry[];
+        returnView?: ViewMode;
+      },
+    ) => {
+      setSelectedEntry(entry);
+      setDetailSequence(options?.sequence && options.sequence.length > 0 ? options.sequence : [entry]);
+      setDetailReturnView(options?.returnView ?? currentView);
+      setCurrentView('detail');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [currentView],
+  );
 
   const toggleFavorite = useCallback((id: string) => {
     const isFav = hskDataService.toggleFavorite(id);
@@ -361,10 +382,7 @@ function App() {
       {/* Character of the Day */}
       <Suspense fallback={<SectionLoader label="Loading your daily character..." />}>
         <CharacterOfTheDay 
-          onViewDetails={(entry) => {
-            setSelectedEntry(entry);
-            setCurrentView('detail');
-          }}
+          onViewDetails={(entry) => openDetailView(entry, { sequence: [entry], returnView: 'dashboard' })}
         />
       </Suspense>
 
@@ -468,49 +486,6 @@ function App() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Data Coverage Info */}
-      {dataCoverage && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Info className="w-4 h-4" />
-              Dictionary Data Coverage
-            </CardTitle>
-            <CardDescription>
-              Statistics about available character and stroke data
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">
-                  {Math.round((dataCoverage.wordsWithStrokeData / dataCoverage.totalWords) * 100)}%
-                </div>
-                <div className="text-xs text-muted-foreground">Words with Stroke Data</div>
-              </div>
-              <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">
-                  {Math.round((dataCoverage.wordsWithEtymology / dataCoverage.totalWords) * 100)}%
-                </div>
-                <div className="text-xs text-muted-foreground">Words with Etymology</div>
-              </div>
-              <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">
-                  {dataCoverage.singleCharsWithData.toLocaleString()}
-                </div>
-                <div className="text-xs text-muted-foreground">Single Characters</div>
-              </div>
-              <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">
-                  {dataCoverage.multiCharsWithBreakdown.toLocaleString()}
-                </div>
-                <div className="text-xs text-muted-foreground">Multi-char Breakdowns</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Pomodoro Dialog */}
       <Dialog open={showPomodoro} onOpenChange={setShowPomodoro}>
@@ -684,10 +659,7 @@ function App() {
             key={`${deferredSearchQuery}|${selectedLevel}|${selectedPOS}`}
             entries={searchResults}
             favoriteIds={favorites}
-            onEntryClick={(entry) => {
-              setSelectedEntry(entry);
-              setCurrentView('detail');
-            }}
+            onEntryClick={(entry) => openDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
             onToggleFavorite={toggleFavorite}
             itemsPerPage={48}
           />
@@ -695,10 +667,7 @@ function App() {
           <VirtualizedWordList
             entries={searchResults}
             favoriteIds={favorites}
-            onEntryClick={(entry) => {
-              setSelectedEntry(entry);
-              setCurrentView('detail');
-            }}
+            onEntryClick={(entry) => openDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
             onToggleFavorite={toggleFavorite}
           />
         )}
@@ -709,6 +678,29 @@ function App() {
   // Detail View
   const renderDetail = () => {
     if (!selectedEntry) return null;
+
+    const sequence = detailSequence.length > 0 ? detailSequence : [selectedEntry];
+    const currentIndex = sequence.findIndex((item) => item.id === selectedEntry.id);
+    const canGoPrevious = currentIndex > 0;
+    const canGoNext = currentIndex >= 0 && currentIndex < sequence.length - 1;
+
+    const backLabel =
+      detailReturnView === 'dashboard'
+        ? 'Dashboard'
+        : detailReturnView === 'progress'
+          ? 'Progress'
+          : detailReturnView === 'study'
+              ? 'Study'
+              : detailReturnView === 'landing'
+                ? 'Home'
+                : 'Browse';
+
+    const navigateDetailByOffset = (offset: -1 | 1) => {
+      const next = sequence[currentIndex + offset];
+      if (!next) return;
+      setSelectedEntry(next);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
     
     return (
       <motion.div
@@ -718,10 +710,10 @@ function App() {
       >
         <Button 
           variant="ghost" 
-          onClick={() => setCurrentView('browse')}
+          onClick={() => setCurrentView(detailReturnView)}
           className="mb-2"
         >
-          ← Back to Browse
+          ← Back to {backLabel}
         </Button>
         
         <Suspense fallback={<SectionLoader label="Loading word details..." />}>
@@ -732,8 +724,20 @@ function App() {
             onToggleFavorite={() => toggleFavorite(selectedEntry.id)}
             onRelatedWordClick={(entry) => {
               setSelectedEntry(entry);
+              setDetailSequence((previous) => {
+                if (previous.some((item) => item.id === entry.id)) {
+                  return previous;
+                }
+
+                return [...previous, entry];
+              });
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            canGoPrevious={canGoPrevious}
+            canGoNext={canGoNext}
+            onGoPrevious={() => navigateDetailByOffset(-1)}
+            onGoNext={() => navigateDetailByOffset(1)}
+            navigationLabel={currentIndex >= 0 && sequence.length > 1 ? `${currentIndex + 1} / ${sequence.length}` : undefined}
           />
         </Suspense>
       </motion.div>
@@ -920,8 +924,8 @@ function App() {
               setFavorites(hskDataService.getFavorites());
             }}
             onEntryClick={(entry) => {
-              setSelectedEntry(entry);
-              setCurrentView('detail');
+              const favoriteEntries = entries.filter((item) => favorites.includes(item.id));
+              openDetailView(entry, { sequence: favoriteEntries, returnView: 'progress' });
             }}
             onClearAll={() => {
               hskDataService.clearFavorites();

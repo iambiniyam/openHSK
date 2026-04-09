@@ -18,7 +18,14 @@ npm run dev
 npm run build
 npm run preview
 npm run lint
+npm run data:prepare:quality
+npm run data:prepare:examples
 ```
+
+`npm run data:prepare:quality` builds an HSK-focused lexical enrichment file from CC-CEDICT.
+`npm run data:prepare:examples` builds an HSK-focused example sentence enrichment file from Tatoeba Mandarin-English pairs.
+
+Data preparation scripts are in `scripts/data/`.
 
 ## Deploy (Cloudflare Pages)
 
@@ -35,3 +42,7 @@ npm run lint
 - `public/dictionary.txt`
 - `public/graphics.part1.txt`
 - `public/graphics.part2.txt`
+- `public/quality/hsk-cedict-enrichment.v1.json`
+- `public/quality/hsk-tatoeba-examples.v1.json`
+- `public/quality/ATTRIBUTION-CC-CEDICT.txt`
+- `public/quality/ATTRIBUTION-TATOEBA.txt`

@@ -1,6 +1,13 @@
 import type { HSKEntry } from '@/types/hsk';
 import { fetchWithCacheFallback } from '@/lib/offlineFetch';
-import { loadGraphicsDatasetText, loadHskDataset } from '@/lib/datasetLoader';
+import {
+  loadCedictEnrichmentDataset,
+  loadGraphicsDatasetPartsText,
+  loadHskDataset,
+  type CedictEnrichmentEntry,
+  loadTatoebaExamplesDataset,
+  type TatoebaExample,
+} from '@/lib/datasetLoader';
 
 // Unified Dictionary Entry - combines HSK + makemeahanzi + additional data
 export interface UnifiedEntry {
@@ -8,8 +15,11 @@ export interface UnifiedEntry {
   hanzi: string;
   traditional?: string;
   pinyin: string;
+  altPinyin?: string[];
   pinyinTones: number[]; // Tone numbers [1, 2, 3, 4, 0]
   definitions: string[];
+  definitionSources?: Array<'hsk' | 'cedict'>;
+  qualityScore?: number;
   hskLevel?: number;
   partOfSpeech: string[];
   
@@ -55,6 +65,7 @@ export interface ExampleSentence {
   pinyin: string;
   english: string;
   source?: string;
+  sourceUrl?: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
 }
 
@@ -88,6 +99,13 @@ interface CharacterDictionaryData {
   matches?: (number[] | null)[];
 }
 
+type NetworkConnection = {
+  saveData?: boolean;
+  effectiveType?: string;
+};
+
+const LOW_BANDWIDTH_TYPES = new Set(['slow-2g', '2g']);
+
 class UnifiedDictionaryService {
   private entries: Map<string, UnifiedEntry> = new Map();
   private hanziIndex: Map<string, string[]> = new Map(); // hanzi -> entry IDs
@@ -96,6 +114,8 @@ class UnifiedDictionaryService {
   private hskData: HSKEntry[] = [];
   private charData: Map<string, CharacterDictionaryData> = new Map(); // makemeahanzi dictionary data
   private graphicsData: Map<string, CharacterGraphics> = new Map(); // stroke graphics data
+  private cedictEnrichment: Map<string, CedictEnrichmentEntry> = new Map();
+  private tatoebaExamples: Map<string, ExampleSentence[]> = new Map();
   private loaded = false;
   private loadPromise: Promise<void> | null = null;
 
@@ -111,15 +131,55 @@ class UnifiedDictionaryService {
     console.time('Dictionary Load');
     
     try {
-      const [hskData, dictText, graphicsText] = await Promise.all([
+      const shouldLoadTatoebaExamples = this.shouldLoadTatoebaExamples();
+      const [hskData, dictText, graphicsParts, cedictDataset, tatoebaDataset] = await Promise.all([
         loadHskDataset<HSKEntry>(),
         fetchWithCacheFallback('/dictionary.txt').then((response) => response.text()),
-        loadGraphicsDatasetText(),
+        loadGraphicsDatasetPartsText(),
+        loadCedictEnrichmentDataset(),
+        shouldLoadTatoebaExamples
+          ? loadTatoebaExamplesDataset()
+          : Promise.resolve(null),
       ]);
 
       this.hskData = hskData;
       this.parseCharacterData(dictText);
-      this.parseGraphicsData(graphicsText);
+      for (const graphicsPart of graphicsParts) {
+        this.parseGraphicsData(graphicsPart);
+      }
+
+      this.cedictEnrichment.clear();
+      if (cedictDataset?.entries?.length) {
+        for (const entry of cedictDataset.entries) {
+          this.cedictEnrichment.set(entry.hanzi, entry);
+        }
+      }
+
+      this.tatoebaExamples.clear();
+      if (tatoebaDataset?.words?.length) {
+        for (const wordEntry of tatoebaDataset.words) {
+          if (!wordEntry?.hanzi || !Array.isArray(wordEntry.examples) || wordEntry.examples.length === 0) {
+            continue;
+          }
+
+          const examples = wordEntry.examples
+            .filter((example): example is TatoebaExample => {
+              return Boolean(example && example.chinese && example.english && example.sourceId);
+            })
+            .map((example) => ({
+              chinese: example.chinese,
+              pinyin: example.pinyin,
+              english: example.english,
+              source: `Tatoeba #${example.sourceId}`,
+              sourceUrl: `https://tatoeba.org/en/sentences/show/${example.sourceId}`,
+              difficulty: example.difficulty,
+            }));
+
+          if (examples.length > 0) {
+            this.tatoebaExamples.set(wordEntry.hanzi, examples);
+          }
+        }
+      }
       
       // Build unified entries
       this.buildUnifiedEntries();
@@ -132,10 +192,35 @@ class UnifiedDictionaryService {
       console.log(`Loaded ${this.entries.size} unified entries`);
       console.log(`Character data: ${this.charData.size} entries`);
       console.log(`Graphics data: ${this.graphicsData.size} entries`);
+      console.log(`CEDICT enrichment: ${this.cedictEnrichment.size} entries`);
+      console.log(`Tatoeba example coverage: ${this.tatoebaExamples.size} entries`);
+      if (!shouldLoadTatoebaExamples) {
+        console.log('Skipped Tatoeba examples on low-bandwidth connection.');
+      }
     } catch (error) {
       console.error('Failed to load dictionary:', error);
       throw error;
     }
+  }
+
+  private shouldLoadTatoebaExamples(): boolean {
+    if (typeof navigator === 'undefined') {
+      return true;
+    }
+
+    const nav = navigator as Navigator & { connection?: NetworkConnection };
+    const connection = nav.connection;
+    if (!connection) {
+      return true;
+    }
+
+    if (connection.saveData) {
+      return false;
+    }
+
+    return connection.effectiveType
+      ? !LOW_BANDWIDTH_TYPES.has(connection.effectiveType)
+      : true;
   }
 
   private parseCharacterData(text: string): void {
@@ -167,6 +252,7 @@ class UnifiedDictionaryService {
     for (const hskEntry of this.hskData) {
       const hanzi = hskEntry.source.hanzi;
       const id = hskEntry.entry_id;
+      const cedict = this.cedictEnrichment.get(hanzi);
       
       // Get character data for each character in the word
       const charDataList = hanzi.split('').map(char => this.charData.get(char));
@@ -174,6 +260,17 @@ class UnifiedDictionaryService {
       
       // Parse pinyin tones
       const pinyinTones = this.extractTones(hskEntry.source.pinyin);
+      const altPinyin = cedict?.pinyin.filter((p) => p !== hskEntry.source.pinyin) || [];
+      const definitions = this.mergeDefinitions(hskEntry.core.english_definitions, cedict?.definitions || []);
+      const baseExamples: ExampleSentence[] = hskEntry.examples.map(ex => ({
+        chinese: ex.chinese,
+        pinyin: ex.pinyin,
+        english: ex.english,
+        source: 'OpenHSK',
+        difficulty: this.mapDifficulty(ex.difficulty_level),
+      }));
+      const externalExamples = this.tatoebaExamples.get(hanzi) || [];
+      const examples = this.mergeExamples(baseExamples, externalExamples);
       
       // Build character breakdown for multi-character words
       const characterBreakdown = this.buildCharacterBreakdown(hanzi);
@@ -184,8 +281,11 @@ class UnifiedDictionaryService {
         hanzi,
         traditional: hskEntry.source.traditional,
         pinyin: hskEntry.source.pinyin,
+        altPinyin: altPinyin.length > 0 ? altPinyin : undefined,
         pinyinTones,
-        definitions: hskEntry.core.english_definitions,
+        definitions,
+        definitionSources: cedict ? ['hsk', 'cedict'] : ['hsk'],
+        qualityScore: cedict?.qualityScore ?? 0.6,
         hskLevel: hskEntry.source.level,
         partOfSpeech: hskEntry.core.part_of_speech,
         
@@ -199,12 +299,7 @@ class UnifiedDictionaryService {
         characterBreakdown: characterBreakdown && characterBreakdown.length > 0 ? characterBreakdown : undefined,
         
         // Examples
-        examples: hskEntry.examples.map(ex => ({
-          chinese: ex.chinese,
-          pinyin: ex.pinyin,
-          english: ex.english,
-          difficulty: this.mapDifficulty(ex.difficulty_level)
-        })),
+        examples,
         
         // Related words
         synonyms: hskEntry.related_vocabulary.synonyms.map(s => ({
@@ -227,7 +322,7 @@ class UnifiedDictionaryService {
         // Learning aids
         mnemonic: hskEntry.learning_aids?.mnemonic,
         commonMistakes: hskEntry.usage_grammar?.common_mistakes?.map(m => m.mistake),
-        usageNotes: hskEntry.usage_grammar?.register?.join(', ')
+        usageNotes: hskEntry.usage_grammar?.register?.join(', '),
       };
       
       this.entries.set(id, unified);
@@ -235,6 +330,44 @@ class UnifiedDictionaryService {
     
     // Enrich related words with pinyin from our data
     this.enrichRelatedWords();
+  }
+
+  private mergeDefinitions(primary: string[], secondary: string[]): string[] {
+    const dedup = new Map<string, string>();
+
+    for (const definition of [...primary, ...secondary]) {
+      const normalized = definition.replace(/\s+/g, ' ').trim();
+      if (!normalized) continue;
+
+      const key = normalized.toLowerCase();
+      if (!dedup.has(key)) {
+        dedup.set(key, normalized);
+      }
+    }
+
+    return Array.from(dedup.values()).slice(0, 12);
+  }
+
+  private mergeExamples(primary: ExampleSentence[], secondary: ExampleSentence[]): ExampleSentence[] {
+    const dedup = new Map<string, ExampleSentence>();
+
+    for (const example of [...primary, ...secondary]) {
+      const chinese = example.chinese?.trim();
+      const english = example.english?.trim();
+      if (!chinese || !english) continue;
+
+      const key = `${chinese}::${english}`.toLowerCase();
+      if (!dedup.has(key)) {
+        dedup.set(key, {
+          ...example,
+          chinese,
+          english,
+          pinyin: example.pinyin?.trim() || '',
+        });
+      }
+    }
+
+    return Array.from(dedup.values()).slice(0, 12);
   }
 
   private buildCharacterBreakdown(hanzi: string): UnifiedEntry['characterBreakdown'] {
@@ -499,41 +632,75 @@ class UnifiedDictionaryService {
   getRelatedEntries(hanzi: string): UnifiedEntry[] {
     const entry = this.getEntryByHanzi(hanzi);
     if (!entry) return [];
-    
-    const related: UnifiedEntry[] = [];
-    
-    // Add synonyms
-    for (const syn of entry.synonyms) {
-      const found = this.getEntryByHanzi(syn.hanzi);
-      if (found) related.push(found);
-    }
-    
-    // Add antonyms
-    for (const ant of entry.antonyms) {
-      const found = this.getEntryByHanzi(ant.hanzi);
-      if (found) related.push(found);
-    }
-    
-    // Add word family
-    for (const word of entry.wordFamily) {
-      const found = this.getEntryByHanzi(word.hanzi);
-      if (found) related.push(found);
-    }
-    
-    // Add entries with shared characters
-    for (const char of entry.hanzi) {
-      const ids = this.hanziIndex.get(char);
-      if (ids) {
-        for (const id of ids) {
-          const found = this.entries.get(id);
-          if (found && found.hanzi !== entry.hanzi && !related.includes(found)) {
-            related.push(found);
-          }
+
+    const baseCharSet = new Set(entry.hanzi.split(''));
+    const scored = new Map<string, { entry: UnifiedEntry; score: number }>();
+
+    const addCandidate = (candidate: UnifiedEntry | undefined, baseScore: number): void => {
+      if (!candidate || candidate.id === entry.id) return;
+
+      const candidateChars = new Set(candidate.hanzi.split(''));
+      let sharedChars = 0;
+      for (const char of candidateChars) {
+        if (baseCharSet.has(char)) {
+          sharedChars += 1;
         }
       }
+
+      let score = baseScore + sharedChars * 12;
+
+      if (entry.hskLevel && candidate.hskLevel && entry.hskLevel === candidate.hskLevel) {
+        score += 15;
+      }
+
+      if (
+        entry.partOfSpeech.length > 0 &&
+        candidate.partOfSpeech.length > 0 &&
+        entry.partOfSpeech.some((pos) => candidate.partOfSpeech.includes(pos))
+      ) {
+        score += 8;
+      }
+
+      const existing = scored.get(candidate.id);
+      if (!existing || score > existing.score) {
+        scored.set(candidate.id, { entry: candidate, score });
+      }
+    };
+
+    // Add explicit semantic relations first.
+    for (const syn of entry.synonyms) {
+      addCandidate(this.getEntryByHanzi(syn.hanzi), 120);
     }
-    
-    return related.slice(0, 20);
+
+    for (const ant of entry.antonyms) {
+      addCandidate(this.getEntryByHanzi(ant.hanzi), 110);
+    }
+
+    for (const word of entry.wordFamily) {
+      addCandidate(this.getEntryByHanzi(word.hanzi), 95);
+    }
+
+    // Add entries with shared characters.
+    for (const char of baseCharSet) {
+      const ids = this.hanziIndex.get(char);
+      if (!ids) continue;
+
+      for (const id of ids) {
+        const found = this.entries.get(id);
+        addCandidate(found, 60);
+      }
+    }
+
+    return Array.from(scored.values())
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if ((a.entry.hskLevel || 99) !== (b.entry.hskLevel || 99)) {
+          return (a.entry.hskLevel || 99) - (b.entry.hskLevel || 99);
+        }
+        return a.entry.hanzi.localeCompare(b.entry.hanzi, 'zh-Hans-CN');
+      })
+      .slice(0, 24)
+      .map((item) => item.entry);
   }
 
   // Get character decomposition
@@ -616,51 +783,6 @@ class UnifiedDictionaryService {
     }
     
     return result;
-  }
-
-  // Get data coverage statistics
-  getDataCoverage(): {
-    totalWords: number;
-    wordsWithStrokeData: number;
-    wordsWithEtymology: number;
-    singleCharsWithData: number;
-    multiCharsWithBreakdown: number;
-  } {
-    let wordsWithStrokeData = 0;
-    let wordsWithEtymology = 0;
-    let singleCharsWithData = 0;
-    let multiCharsWithBreakdown = 0;
-    
-    for (const entry of this.entries.values()) {
-      // Check if all characters have stroke data
-      const allCharsHaveStrokes = entry.hanzi.split('').every(char => this.graphicsData.has(char));
-      if (allCharsHaveStrokes) {
-        wordsWithStrokeData++;
-      }
-      
-      // Check etymology
-      if (entry.etymology || (entry.characterBreakdown?.some(c => c.etymology))) {
-        wordsWithEtymology++;
-      }
-      
-      // Single char with data
-      if (entry.hanzi.length === 1 && this.charData.has(entry.hanzi)) {
-        singleCharsWithData++;
-      }
-      
-      // Multi-char with breakdown
-      if (entry.hanzi.length > 1 && entry.characterBreakdown && entry.characterBreakdown.length > 0) {
-        multiCharsWithBreakdown++;
-      }
-    }
-    
-    return {
-      totalWords: this.entries.size,
-      wordsWithStrokeData,
-      wordsWithEtymology,
-      singleCharsWithData,
-      multiCharsWithBreakdown
-    };
   }
 
   // Get random entries
