@@ -3,7 +3,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface LandingPageProps {
   totalWords: number;
@@ -29,6 +29,52 @@ const valuePillars = [
   },
 ];
 
+const roadmap = [
+  {
+    level: 'HSK 1-2',
+    focus: 'Foundation and survival communication',
+    detail: 'Sentence basics, particles, and core verb patterns.',
+  },
+  {
+    level: 'HSK 3-4',
+    focus: 'Fluency and exam stamina',
+    detail: 'Comparison, complements, and connected reading/listening.',
+  },
+  {
+    level: 'HSK 5-6',
+    focus: 'Precision and advanced reading',
+    detail: 'Complex connectors, discourse cohesion, and nuance control.',
+  },
+  {
+    level: 'HSK 7-9',
+    focus: 'Academic and professional expression',
+    detail: 'Argumentation, formal style, and high-level comprehension.',
+  },
+];
+
+const trainingLoop = [
+  {
+    title: 'Diagnose',
+    description: 'Find weak points by level and skill type.',
+    iconPath: '/brand/icons/filter-funnel.svg',
+  },
+  {
+    title: 'Train',
+    description: 'Study targeted words, grammar, and stroke patterns.',
+    iconPath: '/brand/icons/timer-focus.svg',
+  },
+  {
+    title: 'Simulate',
+    description: 'Use timed practice to build real exam confidence.',
+    iconPath: '/brand/icons/quiz-flash.svg',
+  },
+  {
+    title: 'Track',
+    description: 'Measure progress and revisit weak points automatically.',
+    iconPath: '/brand/icons/progress-mountain.svg',
+  },
+];
+
 export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }: LandingPageProps) => {
   return (
     <div className="space-y-6 sm:space-y-8 pb-4">
@@ -44,6 +90,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-35"
           loading="eager"
+          decoding="async"
         />
         <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
         <div className="pointer-events-none absolute -left-16 bottom-0 h-44 w-44 rounded-full bg-primary/20 blur-2xl" />
@@ -56,6 +103,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
                 alt="OpenHSK"
                 className="h-auto w-full"
                 loading="eager"
+                fetchPriority="high"
               />
             </div>
 
@@ -70,7 +118,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
             </div>
 
             <p className="max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
-              One focused platform for HSK vocabulary, writing practice, and daily review.
+              One focused platform for HSK vocabulary, grammar progression, writing practice, and daily review.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -84,7 +132,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 max-w-2xl">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-3xl">
             <Card className="border-primary/20 bg-card/90 shadow-sm">
               <CardContent className="p-3 sm:p-4">
                 <div className="text-xl sm:text-2xl font-extrabold text-primary">{totalWords.toLocaleString()}</div>
@@ -103,6 +151,12 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
                 <div className="text-[11px] sm:text-xs text-muted-foreground">Open Access</div>
               </CardContent>
             </Card>
+            <Card className="border-primary/20 bg-card/90 shadow-sm">
+              <CardContent className="p-3 sm:p-4">
+                <div className="text-xl sm:text-2xl font-extrabold text-primary">Grammar</div>
+                <div className="text-[11px] sm:text-xs text-muted-foreground">HSK Map</div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </motion.section>
@@ -118,7 +172,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
             <Card key={pillar.title} className="h-full border-border/80 bg-card/95">
               <CardContent className="p-4 sm:p-5 space-y-2.5">
                 <div className="inline-flex rounded-lg bg-primary/10 p-2 text-primary">
-                  <img src={pillar.iconPath} alt="" aria-hidden="true" className="h-5 w-5" loading="lazy" />
+                  <img src={pillar.iconPath} alt="" aria-hidden="true" className="h-5 w-5" loading="lazy" decoding="async" />
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold text-foreground">{pillar.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{pillar.description}</p>
@@ -126,6 +180,57 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
             </Card>
           );
         })}
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]"
+      >
+        <Card className="border-border/80 bg-card/95">
+          <CardHeader>
+            <CardTitle className="text-lg sm:text-xl">HSK Roadmap</CardTitle>
+            <CardDescription>
+              Follow the level path with clear milestones from basics to advanced fluency.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {roadmap.map((item) => (
+                <div key={item.level} className="rounded-xl border bg-muted/40 p-3 space-y-1.5">
+                  <div className="text-sm font-semibold text-primary">{item.level}</div>
+                  <div className="text-sm font-medium text-foreground">{item.focus}</div>
+                  <div className="text-xs text-muted-foreground leading-relaxed">{item.detail}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/80 bg-card/95">
+          <CardHeader>
+            <CardTitle className="text-lg sm:text-xl">Pass-Ready Training Loop</CardTitle>
+            <CardDescription>
+              Repeat this loop every week to improve score and retention.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2.5">
+            {trainingLoop.map((step, index) => (
+              <div key={step.title} className="flex items-start gap-3 rounded-xl border bg-muted/30 p-3">
+                <div className="inline-flex shrink-0 items-center justify-center rounded-full bg-primary/10 p-2">
+                  <img src={step.iconPath} alt="" aria-hidden="true" className="h-4 w-4" loading="lazy" decoding="async" />
+                </div>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-sm font-semibold text-foreground">
+                    {index + 1}. {step.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground break-words">{step.description}</div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </motion.section>
     </div>
   );

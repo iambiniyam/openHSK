@@ -25,7 +25,8 @@ import {
   Filter,
   X,
   LayoutGrid,
-  List
+  List,
+  GitBranch
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +51,145 @@ import './App.css';
 
 type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress';
 type ListViewMode = 'paginated' | 'virtualized';
+type ProgressTab = 'stats' | 'favorites' | 'grammar' | 'data';
+
+const APP_SESSION_STORAGE_KEY = 'openhsk.ui-session.v1';
+const MAX_PERSISTED_DETAIL_SEQUENCE = 180;
+const MAX_PERSISTED_STUDY_ENTRIES = 30;
+const MAX_DETAIL_NAV_SEQUENCE = 240;
+
+interface PersistedUiSession {
+  version: 1;
+  currentView: ViewMode;
+  darkMode: boolean;
+  ttsRate: number;
+  searchQuery: string;
+  selectedLevel: number | 'all' | '7-9';
+  selectedPOS: string;
+  listViewMode: ListViewMode;
+  browsePage: number;
+  progressTab: ProgressTab;
+  selectedEntryId?: string;
+  detailSequenceIds: string[];
+  detailReturnView: ViewMode;
+  studyEntryIds: string[];
+  currentStudyIndex: number;
+  showAnswer: boolean;
+  showQuiz: boolean;
+  scrollPositions: Partial<Record<ViewMode, number>>;
+}
+
+const isViewMode = (value: unknown): value is ViewMode => {
+  return (
+    typeof value === 'string' &&
+    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress'].includes(value)
+  );
+};
+
+const isListViewMode = (value: unknown): value is ListViewMode => {
+  return typeof value === 'string' && ['paginated', 'virtualized'].includes(value);
+};
+
+const isProgressTab = (value: unknown): value is ProgressTab => {
+  return typeof value === 'string' && ['stats', 'favorites', 'grammar', 'data'].includes(value);
+};
+
+const normalizeSelectedLevel = (value: unknown): number | 'all' | '7-9' => {
+  if (value === 'all' || value === '7-9') return value;
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 1 && value <= 9) {
+    return value >= 7 ? '7-9' : value;
+  }
+  return 'all';
+};
+
+const sanitizeScrollPositions = (value: unknown): Partial<Record<ViewMode, number>> => {
+  if (!value || typeof value !== 'object') return {};
+
+  const positions: Partial<Record<ViewMode, number>> = {};
+  for (const [rawView, rawPosition] of Object.entries(value)) {
+    if (!isViewMode(rawView)) continue;
+    if (typeof rawPosition !== 'number' || !Number.isFinite(rawPosition) || rawPosition < 0) continue;
+    positions[rawView] = rawPosition;
+  }
+
+  return positions;
+};
+
+const loadPersistedUiSession = (): PersistedUiSession | null => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(APP_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<PersistedUiSession>;
+    if (parsed.version !== 1) return null;
+
+    return {
+      version: 1,
+      currentView: isViewMode(parsed.currentView) ? parsed.currentView : 'landing',
+      darkMode: typeof parsed.darkMode === 'boolean' ? parsed.darkMode : false,
+      ttsRate:
+        typeof parsed.ttsRate === 'number' && Number.isFinite(parsed.ttsRate)
+          ? Math.min(Math.max(parsed.ttsRate, 0.5), 2)
+          : 1,
+      searchQuery: typeof parsed.searchQuery === 'string' ? parsed.searchQuery : '',
+      selectedLevel: normalizeSelectedLevel(parsed.selectedLevel),
+      selectedPOS: typeof parsed.selectedPOS === 'string' ? parsed.selectedPOS : 'all',
+      listViewMode: isListViewMode(parsed.listViewMode) ? parsed.listViewMode : 'paginated',
+      browsePage:
+        typeof parsed.browsePage === 'number' && Number.isFinite(parsed.browsePage) && parsed.browsePage > 0
+          ? Math.floor(parsed.browsePage)
+          : 1,
+      progressTab: isProgressTab(parsed.progressTab) ? parsed.progressTab : 'stats',
+      selectedEntryId: typeof parsed.selectedEntryId === 'string' ? parsed.selectedEntryId : undefined,
+      detailSequenceIds: Array.isArray(parsed.detailSequenceIds)
+        ? parsed.detailSequenceIds.filter((id): id is string => typeof id === 'string').slice(0, MAX_PERSISTED_DETAIL_SEQUENCE)
+        : [],
+      detailReturnView: isViewMode(parsed.detailReturnView) ? parsed.detailReturnView : 'browse',
+      studyEntryIds: Array.isArray(parsed.studyEntryIds)
+        ? parsed.studyEntryIds.filter((id): id is string => typeof id === 'string').slice(0, MAX_PERSISTED_STUDY_ENTRIES)
+        : [],
+      currentStudyIndex:
+        typeof parsed.currentStudyIndex === 'number' && Number.isFinite(parsed.currentStudyIndex) && parsed.currentStudyIndex >= 0
+          ? Math.floor(parsed.currentStudyIndex)
+          : 0,
+      showAnswer: Boolean(parsed.showAnswer),
+      showQuiz: Boolean(parsed.showQuiz),
+      scrollPositions: sanitizeScrollPositions(parsed.scrollPositions),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const savePersistedUiSession = (session: PersistedUiSession): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(APP_SESSION_STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // Ignore storage failures to avoid blocking the app.
+  }
+};
+
+const buildDetailSequenceWindow = (sequence: UnifiedEntry[], selectedId: string): UnifiedEntry[] => {
+  if (sequence.length <= MAX_DETAIL_NAV_SEQUENCE) {
+    return sequence;
+  }
+
+  const selectedIndex = sequence.findIndex((entry) => entry.id === selectedId);
+  if (selectedIndex === -1) {
+    return sequence.slice(0, MAX_DETAIL_NAV_SEQUENCE);
+  }
+
+  const halfWindow = Math.floor(MAX_DETAIL_NAV_SEQUENCE / 2);
+  const start = Math.max(0, selectedIndex - halfWindow);
+  const end = Math.min(sequence.length, start + MAX_DETAIL_NAV_SEQUENCE);
+  const normalizedStart = Math.max(0, end - MAX_DETAIL_NAV_SEQUENCE);
+
+  return sequence.slice(normalizedStart, end);
+};
 
 const LandingPage = lazy(() => import('@/components/LandingPage'));
 const VirtualizedWordList = lazy(() => import('@/components/VirtualizedWordList'));
@@ -60,6 +200,7 @@ const QuizMode = lazy(() => import('@/components/QuizMode'));
 const FavoritesList = lazy(() => import('@/components/FavoritesList'));
 const DailyGoals = lazy(() => import('@/components/DailyGoals'));
 const CharacterOfTheDay = lazy(() => import('@/components/CharacterOfTheDay'));
+const GrammarMap = lazy(() => import('@/components/GrammarMap'));
 
 const SectionLoader = ({ label }: { label: string }) => (
   <Card>
@@ -77,24 +218,38 @@ const SectionLoader = ({ label }: { label: string }) => (
 );
 
 function App() {
+  const initialSession = useMemo(() => loadPersistedUiSession(), []);
+
   // State
-  const [darkMode, setDarkMode] = useState(false);
-  const [currentView, setCurrentView] = useState<ViewMode>('landing');
+  const [darkMode, setDarkMode] = useState(() => {
+    if (initialSession) return initialSession.darkMode;
+
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    return false;
+  });
+  const [currentView, setCurrentView] = useState<ViewMode>(initialSession?.currentView || 'landing');
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<UnifiedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnifiedEntry | null>(null);
   const [detailSequence, setDetailSequence] = useState<UnifiedEntry[]>([]);
-  const [detailReturnView, setDetailReturnView] = useState<ViewMode>('browse');
+  const [detailReturnView, setDetailReturnView] = useState<ViewMode>(initialSession?.detailReturnView || 'browse');
   
   // Search state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState<number | 'all' | '7-9'>('all');
-  const [selectedPOS, setSelectedPOS] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState(initialSession?.searchQuery || '');
+  const [selectedLevel, setSelectedLevel] = useState<number | 'all' | '7-9'>(initialSession?.selectedLevel || 'all');
+  const [selectedPOS, setSelectedPOS] = useState<string>(initialSession?.selectedPOS || 'all');
   const [searchResults, setSearchResults] = useState<UnifiedEntry[]>([]);
-  const [listViewMode, setListViewMode] = useState<ListViewMode>('paginated');
+  const [listViewMode, setListViewMode] = useState<ListViewMode>(initialSession?.listViewMode || 'paginated');
+  const [browsePage, setBrowsePage] = useState<number>(initialSession?.browsePage || 1);
+  const [progressTab, setProgressTab] = useState<ProgressTab>(initialSession?.progressTab || 'stats');
   const [isPending, startTransition] = useTransition();
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const searchCacheRef = useRef<Map<string, UnifiedEntry[]>>(new Map());
+  const viewScrollPositionsRef = useRef<Partial<Record<ViewMode, number>>>(initialSession?.scrollPositions || {});
+  const previousViewRef = useRef<ViewMode>(initialSession?.currentView || 'landing');
   
   // Stats
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -115,7 +270,7 @@ function App() {
   const [showQuiz, setShowQuiz] = useState(false);
   
   // Settings
-  const [ttsRate, setTtsRate] = useState(1);
+  const [ttsRate, setTtsRate] = useState(initialSession?.ttsRate || 1);
   const [showPomodoro, setShowPomodoro] = useState(false);
   const [exportData, setExportData] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -136,6 +291,60 @@ function App() {
         setDueCount(hskDataService.getDueReviews().length);
         setFavorites(hskDataService.getFavorites());
         setDailyStats(hskDataService.getDailyStats());
+
+        if (initialSession) {
+          const entryById = new Map(allEntries.map((entry) => [entry.id, entry] as const));
+
+          setDarkMode(initialSession.darkMode);
+          setTtsRate(initialSession.ttsRate);
+          setSearchQuery(initialSession.searchQuery);
+          setSelectedLevel(initialSession.selectedLevel);
+          setSelectedPOS(initialSession.selectedPOS);
+          setListViewMode(initialSession.listViewMode);
+          setBrowsePage(initialSession.browsePage);
+          setProgressTab(initialSession.progressTab);
+          setDetailReturnView(initialSession.detailReturnView);
+          viewScrollPositionsRef.current = initialSession.scrollPositions;
+
+          const restoredDetailSequence = initialSession.detailSequenceIds
+            .map((id) => entryById.get(id))
+            .filter((entry): entry is UnifiedEntry => Boolean(entry));
+
+          const restoredSelectedEntry = initialSession.selectedEntryId
+            ? entryById.get(initialSession.selectedEntryId) || null
+            : null;
+
+          if (restoredSelectedEntry) {
+            setSelectedEntry(restoredSelectedEntry);
+            setDetailSequence(
+              restoredDetailSequence.length > 0 ? restoredDetailSequence : [restoredSelectedEntry],
+            );
+          }
+
+          const restoredStudyEntries = initialSession.studyEntryIds
+            .map((id) => entryById.get(id))
+            .filter((entry): entry is UnifiedEntry => Boolean(entry));
+
+          if (restoredStudyEntries.length > 0) {
+            setStudyEntries(restoredStudyEntries);
+            setCurrentStudyIndex(
+              Math.min(initialSession.currentStudyIndex, restoredStudyEntries.length - 1),
+            );
+            setShowAnswer(initialSession.showAnswer);
+            setShowQuiz(initialSession.showQuiz);
+          }
+
+          let restoredView = initialSession.currentView;
+          if (restoredView === 'detail' && !restoredSelectedEntry) {
+            restoredView = initialSession.detailReturnView;
+          }
+          if (restoredView === 'study' && restoredStudyEntries.length === 0) {
+            restoredView = 'dashboard';
+          }
+
+          setCurrentView(restoredView);
+          previousViewRef.current = restoredView;
+        }
         
         setLoading(false);
       } catch (error) {
@@ -144,7 +353,7 @@ function App() {
       }
     };
     init();
-  }, []);
+  }, [initialSession]);
 
   useEffect(() => {
     if (loading) return;
@@ -155,6 +364,25 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
+
+  // Remember scroll position per view and restore when users return.
+  useEffect(() => {
+    if (loading) return;
+
+    const previousView = previousViewRef.current;
+    if (previousView !== currentView) {
+      viewScrollPositionsRef.current[previousView] = window.scrollY;
+    }
+
+    if (currentView !== 'detail' && currentView !== 'study') {
+      const targetScroll = viewScrollPositionsRef.current[currentView] || 0;
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: targetScroll, behavior: 'auto' });
+      });
+    }
+
+    previousViewRef.current = currentView;
+  }, [currentView, loading]);
 
   // Update metadata by active section to improve crawlable context.
   useEffect(() => {
@@ -190,6 +418,76 @@ function App() {
   useEffect(() => {
     ttsService.setRate(ttsRate);
   }, [ttsRate]);
+
+  // Persist UI session so users can continue where they left off.
+  useEffect(() => {
+    if (loading) return;
+
+    const detailSequenceIds =
+      currentView === 'detail'
+        ? detailSequence.map((entry) => entry.id).slice(0, MAX_PERSISTED_DETAIL_SEQUENCE)
+        : selectedEntry
+          ? [selectedEntry.id]
+          : [];
+
+    const persistSession = () => {
+      savePersistedUiSession({
+        version: 1,
+        currentView,
+        darkMode,
+        ttsRate,
+        searchQuery,
+        selectedLevel,
+        selectedPOS,
+        listViewMode,
+        browsePage,
+        progressTab,
+        selectedEntryId: selectedEntry?.id,
+        detailSequenceIds,
+        detailReturnView,
+        studyEntryIds: studyEntries.map((entry) => entry.id).slice(0, MAX_PERSISTED_STUDY_ENTRIES),
+        currentStudyIndex,
+        showAnswer,
+        showQuiz,
+        scrollPositions: viewScrollPositionsRef.current,
+      });
+    };
+
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    if (typeof idleWindow.requestIdleCallback === 'function') {
+      const handle = idleWindow.requestIdleCallback(persistSession, { timeout: 700 });
+      return () => {
+        if (typeof idleWindow.cancelIdleCallback === 'function') {
+          idleWindow.cancelIdleCallback(handle);
+        }
+      };
+    }
+
+    const timer = window.setTimeout(persistSession, 240);
+    return () => window.clearTimeout(timer);
+  }, [
+    loading,
+    currentView,
+    darkMode,
+    ttsRate,
+    searchQuery,
+    selectedLevel,
+    selectedPOS,
+    listViewMode,
+    browsePage,
+    progressTab,
+    selectedEntry,
+    detailSequence,
+    detailReturnView,
+    studyEntries,
+    currentStudyIndex,
+    showAnswer,
+    showQuiz,
+  ]);
 
   // Search with debounce - optimized for performance
   useEffect(() => {
@@ -244,7 +542,8 @@ function App() {
       },
     ) => {
       setSelectedEntry(entry);
-      setDetailSequence(options?.sequence && options.sequence.length > 0 ? options.sequence : [entry]);
+      const rawSequence = options?.sequence && options.sequence.length > 0 ? options.sequence : [entry];
+      setDetailSequence(buildDetailSequenceWindow(rawSequence, entry.id));
       setDetailReturnView(options?.returnView ?? currentView);
       setCurrentView('detail');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -392,7 +691,7 @@ function App() {
       </Suspense>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { 
             icon: Brain, 
@@ -425,6 +724,17 @@ function App() {
             toneClass: 'bg-blue-100 dark:bg-blue-900',
             iconClass: 'text-blue-600 dark:text-blue-400',
             onClick: () => setShowPomodoro(true)
+          },
+          {
+            icon: GitBranch,
+            title: 'Grammar Map',
+            desc: 'Track prerequisites',
+            toneClass: 'bg-violet-100 dark:bg-violet-900',
+            iconClass: 'text-violet-700 dark:text-violet-300',
+            onClick: () => {
+              setProgressTab('grammar');
+              setCurrentView('progress');
+            },
           },
         ].map((action, i) => (
           <motion.div
@@ -539,7 +849,10 @@ function App() {
               <Input
                 placeholder="Search character, pinyin, meaning..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setBrowsePage(1);
+                }}
                 className="pl-9 sm:pl-10 h-10 sm:h-12 text-base sm:text-lg"
               />
               {searchQuery && (
@@ -547,7 +860,10 @@ function App() {
                   variant="ghost"
                   size="icon"
                   className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setBrowsePage(1);
+                  }}
                 >
                   <X className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
@@ -562,6 +878,7 @@ function App() {
                   if (v === 'all') setSelectedLevel('all');
                   else if (v === '7-9') setSelectedLevel('7-9');
                   else setSelectedLevel(parseInt(v));
+                  setBrowsePage(1);
                 }}
               >
                 <SelectTrigger className="w-[100px] sm:w-[120px] h-10 sm:h-12">
@@ -577,7 +894,13 @@ function App() {
                 </SelectContent>
               </Select>
               
-              <Select value={selectedPOS} onValueChange={setSelectedPOS}>
+              <Select
+                value={selectedPOS}
+                onValueChange={(value) => {
+                  setSelectedPOS(value);
+                  setBrowsePage(1);
+                }}
+              >
                 <SelectTrigger className="w-[110px] sm:w-[140px] h-10 sm:h-12">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
@@ -656,12 +979,13 @@ function App() {
       <Suspense fallback={<SectionLoader label="Rendering word list..." />}>
         {listViewMode === 'paginated' ? (
           <PaginatedWordList
-            key={`${deferredSearchQuery}|${selectedLevel}|${selectedPOS}`}
             entries={searchResults}
             favoriteIds={favorites}
             onEntryClick={(entry) => openDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
             onToggleFavorite={toggleFavorite}
             itemsPerPage={48}
+            currentPage={browsePage}
+            onPageChange={setBrowsePage}
           />
         ) : (
           <VirtualizedWordList
@@ -729,7 +1053,7 @@ function App() {
                   return previous;
                 }
 
-                return [...previous, entry];
+                return buildDetailSequenceWindow([...previous, entry], entry.id);
               });
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -859,10 +1183,11 @@ function App() {
 
   // Progress View
   const renderProgress = () => (
-    <Tabs defaultValue="stats" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-3">
+    <Tabs value={progressTab} onValueChange={(value) => setProgressTab(value as ProgressTab)} className="space-y-4">
+      <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="stats">Statistics</TabsTrigger>
         <TabsTrigger value="favorites">Favorites</TabsTrigger>
+        <TabsTrigger value="grammar">Grammar</TabsTrigger>
         <TabsTrigger value="data">Data</TabsTrigger>
       </TabsList>
 
@@ -932,6 +1257,12 @@ function App() {
               setFavorites([]);
             }}
           />
+        </Suspense>
+      </TabsContent>
+
+      <TabsContent value="grammar">
+        <Suspense fallback={<SectionLoader label="Loading grammar map..." />}>
+          <GrammarMap userStats={userStats} />
         </Suspense>
       </TabsContent>
 

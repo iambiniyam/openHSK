@@ -532,7 +532,7 @@ export const WordGraph = ({
       />
       
       {/* Legend */}
-      <div className="absolute top-14 left-3 bg-background/95 backdrop-blur rounded-lg p-3 text-xs space-y-2 border shadow-md max-w-[150px]">
+      <div className="hidden md:block absolute top-14 left-3 bg-background/95 backdrop-blur rounded-lg p-3 text-xs space-y-2 border shadow-md max-w-[150px]">
         <div className="font-semibold mb-2 text-sm">Relationship Types</div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded-full bg-primary shadow-sm"></div>

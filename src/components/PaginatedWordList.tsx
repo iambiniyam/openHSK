@@ -14,6 +14,8 @@ interface PaginatedWordListProps {
   onEntryClick: (entry: UnifiedEntry) => void;
   onToggleFavorite: (id: string) => void;
   itemsPerPage?: number;
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export const PaginatedWordList = ({
@@ -21,11 +23,15 @@ export const PaginatedWordList = ({
   favoriteIds,
   onEntryClick,
   onToggleFavorite,
-  itemsPerPage = 50
+  itemsPerPage = 50,
+  currentPage,
+  onPageChange,
 }: PaginatedWordListProps) => {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(1);
+  const activePage = currentPage ?? internalPage;
   const totalPages = Math.max(1, Math.ceil(entries.length / itemsPerPage));
-  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const safeCurrentPage = Math.min(Math.max(activePage, 1), totalPages);
+  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   // Paginated view for the current page
   const paginatedEntries = useMemo(() => {
@@ -35,7 +41,10 @@ export const PaginatedWordList = ({
 
   const handlePageChange = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
-    setCurrentPage(nextPage);
+    if (currentPage === undefined) {
+      setInternalPage(nextPage);
+    }
+    onPageChange?.(nextPage);
     // Scroll to top of list
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -80,7 +89,7 @@ export const PaginatedWordList = ({
       {/* Word Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {paginatedEntries.map((entry, index) => {
-          const isFav = favoriteIds.includes(entry.id);
+          const isFav = favoriteSet.has(entry.id);
           
           return (
             <motion.div

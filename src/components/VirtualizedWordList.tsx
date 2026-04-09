@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { List, useListRef } from 'react-window';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,7 @@ interface VirtualizedWordListProps {
 
 interface RowProps {
   entries: UnifiedEntry[];
-  favoriteIds: string[];
+  favoriteIdSet: Set<string>;
   onEntryClick: (entry: UnifiedEntry) => void;
   onToggleFavorite: (id: string) => void;
 }
@@ -35,11 +35,11 @@ interface RowComponentProps {
 
 // Row component for the list
 const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowProps): ReactElement | null => {
-  const { entries, favoriteIds, onEntryClick, onToggleFavorite } = data;
+  const { entries, favoriteIdSet, onEntryClick, onToggleFavorite } = data;
   const entry = entries[index];
   if (!entry) return null;
   
-  const isFav = favoriteIds.includes(entry.id);
+  const isFav = favoriteIdSet.has(entry.id);
   
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -123,6 +123,8 @@ export const VirtualizedWordList = ({
   onEntryClick,
   onToggleFavorite
 }: VirtualizedWordListProps) => {
+    const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+
   const listRef = useListRef(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState(500);
@@ -171,7 +173,7 @@ export const VirtualizedWordList = ({
 
   const rowProps: RowProps = {
     entries,
-    favoriteIds,
+    favoriteIdSet,
     onEntryClick,
     onToggleFavorite
   };
