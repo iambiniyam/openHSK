@@ -232,6 +232,7 @@ function App() {
   });
   const [currentView, setCurrentView] = useState<ViewMode>(initialSession?.currentView || 'landing');
   const [loading, setLoading] = useState(true);
+  const [dictionaryReady, setDictionaryReady] = useState(false);
   const [entries, setEntries] = useState<UnifiedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnifiedEntry | null>(null);
   const [detailSequence, setDetailSequence] = useState<UnifiedEntry[]>([]);
@@ -278,9 +279,15 @@ function App() {
 
   // Initialize
   useEffect(() => {
+    let disposed = false;
+
     const init = async () => {
+      // Render shell quickly, then hydrate heavy data in background.
+      setLoading(false);
+
       try {
         await Promise.all([unifiedDictionary.initialize(), hskDataService.loadData()]);
+        if (disposed) return;
         
         const allEntries = unifiedDictionary.getAllEntries();
         setEntries(allEntries);
@@ -345,20 +352,27 @@ function App() {
           setCurrentView(restoredView);
           previousViewRef.current = restoredView;
         }
-        
-        setLoading(false);
+
+        setDictionaryReady(true);
       } catch (error) {
         console.error('Failed to initialize:', error);
-        setLoading(false);
+        if (!disposed) {
+          setDictionaryReady(false);
+        }
       }
     };
+
     init();
+
+    return () => {
+      disposed = true;
+    };
   }, [initialSession]);
 
   useEffect(() => {
-    if (loading) return;
+    if (!dictionaryReady) return;
     return scheduleRuntimeWarmup();
-  }, [loading]);
+  }, [dictionaryReady]);
 
   // Dark mode
   useEffect(() => {
@@ -421,7 +435,7 @@ function App() {
 
   // Persist UI session so users can continue where they left off.
   useEffect(() => {
-    if (loading) return;
+    if (loading || !dictionaryReady) return;
 
     const detailSequenceIds =
       currentView === 'detail'
@@ -487,10 +501,13 @@ function App() {
     currentStudyIndex,
     showAnswer,
     showQuiz,
+    dictionaryReady,
   ]);
 
   // Search with debounce - optimized for performance
   useEffect(() => {
+    if (!dictionaryReady) return;
+
     const cacheKey = `${deferredSearchQuery}|${selectedLevel}|${selectedPOS}`;
     const cached = searchCacheRef.current.get(cacheKey);
 
@@ -520,10 +537,10 @@ function App() {
     }, 120);
 
     return () => clearTimeout(timer);
-  }, [deferredSearchQuery, selectedLevel, selectedPOS, startTransition]);
+  }, [dictionaryReady, deferredSearchQuery, selectedLevel, selectedPOS, startTransition]);
 
   // Stats
-  const hskStats = useMemo(() => unifiedDictionary.getHSKStats(), []);
+  const hskStats = unifiedDictionary.getHSKStats();
   const totalWords = entries.length;
 
   // Actions
@@ -1458,12 +1475,19 @@ function App() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {currentView === 'landing' && renderLanding()}
-            {currentView === 'dashboard' && renderDashboard()}
-            {currentView === 'browse' && renderBrowse()}
-            {currentView === 'detail' && renderDetail()}
-            {currentView === 'study' && renderStudy()}
-            {currentView === 'progress' && renderProgress()}
+            {currentView === 'landing' ? (
+              renderLanding()
+            ) : !dictionaryReady ? (
+              <SectionLoader label="Preparing your HSK data for this section..." />
+            ) : (
+              <>
+                {currentView === 'dashboard' && renderDashboard()}
+                {currentView === 'browse' && renderBrowse()}
+                {currentView === 'detail' && renderDetail()}
+                {currentView === 'study' && renderStudy()}
+                {currentView === 'progress' && renderProgress()}
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
       </main>

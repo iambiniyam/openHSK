@@ -9,6 +9,7 @@ const CEDICT_ENRICHMENT_PATH = '/quality/hsk-cedict-enrichment.v1.json';
 const TATOEBA_EXAMPLES_PATH = '/quality/hsk-tatoeba-examples.v1.json';
 
 const NETWORK_SEQUENTIAL_TYPES = new Set(['slow-2g', '2g']);
+let hskDatasetPromise: Promise<unknown[]> | null = null;
 
 type NetworkConnection = {
   saveData?: boolean;
@@ -122,10 +123,21 @@ async function fetchTextParts(paths: string[]): Promise<string[]> {
 }
 
 export async function loadHskDataset<T>(): Promise<T[]> {
+  if (!hskDatasetPromise) {
+    hskDatasetPromise = (async () => {
+      try {
+        return await fetchJsonArrayParts<unknown>(HSK_PART_PATHS);
+      } catch {
+        return fetchJsonArray<unknown>(HSK_LEGACY_PATH);
+      }
+    })();
+  }
+
   try {
-    return await fetchJsonArrayParts<T>(HSK_PART_PATHS);
-  } catch {
-    return fetchJsonArray<T>(HSK_LEGACY_PATH);
+    return (await hskDatasetPromise) as T[];
+  } catch (error) {
+    hskDatasetPromise = null;
+    throw error;
   }
 }
 
