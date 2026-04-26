@@ -756,7 +756,7 @@ class UnifiedDictionaryService {
   }
 
   // Get HSK statistics - group 7-9 together
-  getHSKStats(): { level: number | '7-9'; label: string; count: number; totalStudied?: number }[] {
+  getHSKStats(): { level: number | '7-9'; label: string; count: number }[] {
     const stats: { [level: string]: number } = {};
     
     for (const entry of this.entries.values()) {

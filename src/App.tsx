@@ -46,10 +46,11 @@ import { hskDataService } from '@/services/hskDataService';
 import { ttsService } from '@/services/ttsService';
 import { scheduleRuntimeWarmup } from '@/lib/runtimeWarmup';
 import type { UserStats } from '@/types/hsk';
+import { AudioPlaylist } from '@/components/AudioPlaylist';
 
 import './App.css';
 
-type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress';
+type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress' | 'audio';
 type ListViewMode = 'paginated' | 'virtualized';
 type ProgressTab = 'stats' | 'favorites' | 'grammar' | 'data';
 
@@ -82,7 +83,7 @@ interface PersistedUiSession {
 const isViewMode = (value: unknown): value is ViewMode => {
   return (
     typeof value === 'string' &&
-    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress'].includes(value)
+    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress', 'audio'].includes(value)
   );
 };
 
@@ -790,7 +791,8 @@ function App() {
         <CardContent>
           <div className="space-y-4">
             {hskStats.filter(s => s.level !== 0).map(({ level, count, label }) => {
-              const progress = userStats?.levelProgress[level as number];
+              const progressKey = String(level);
+              const progress = userStats?.levelProgress[progressKey];
               const studied = progress?.studied || 0;
               const percentage = count > 0 ? (studied / count) * 100 : 0;
               
@@ -968,9 +970,6 @@ function App() {
                     <p>Grid View (Paginated)</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -1237,7 +1236,8 @@ function App() {
           <CardContent>
             <div className="space-y-4">
               {hskStats.filter(s => s.level !== 0).map(({ level, count, label }) => {
-                const progress = userStats?.levelProgress[level as number];
+                const progressKey = String(level);
+                const progress = userStats?.levelProgress[progressKey];
                 const studied = progress?.studied || 0;
                 const percentage = count > 0 ? (studied / count) * 100 : 0;
                 
@@ -1386,6 +1386,15 @@ function App() {
               <BarChart3 className="w-4 h-4" />
               Progress
             </Button>
+            <Button
+              variant={currentView === 'audio' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setCurrentView('audio')}
+              className="gap-2"
+            >
+              <Volume2 className="w-4 h-4" />
+              Audio
+            </Button>
           </nav>
 
           {/* Actions */}
@@ -1462,6 +1471,13 @@ function App() {
           >
             <BarChart3 className="w-5 h-5" />
           </Button>
+          <Button
+            variant={currentView === 'audio' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setCurrentView('audio')}
+          >
+            <Volume2 className="w-5 h-5" />
+          </Button>
         </div>
       </nav>
 
@@ -1486,6 +1502,7 @@ function App() {
                 {currentView === 'detail' && renderDetail()}
                 {currentView === 'study' && renderStudy()}
                 {currentView === 'progress' && renderProgress()}
+                {currentView === 'audio' && <AudioPlaylist />}
               </>
             )}
           </motion.div>

@@ -290,13 +290,26 @@ class HSKDataService {
   }
 
   private calculateLevelProgress(): void {
-    const levelStats: { [level: number]: { studied: number; total: number } } = {};
+    const levelStats: { [level: string]: { studied: number; total: number } } = {};
     
+    let highLevelStudied = 0;
+    let highLevelTotal = 0;
+
     for (let i = 1; i <= 9; i++) {
       const total = this.getEntriesByLevel(i).length;
       const studied = Array.from(this.progress.values())
         .filter(p => p.level === i).length;
-      levelStats[i] = { studied, total };
+
+      levelStats[String(i)] = { studied, total };
+
+      if (i >= 7) {
+        highLevelStudied += studied;
+        highLevelTotal += total;
+      }
+    }
+
+    if (highLevelTotal > 0) {
+      levelStats['7-9'] = { studied: highLevelStudied, total: highLevelTotal };
     }
     
     this.stats.levelProgress = levelStats;

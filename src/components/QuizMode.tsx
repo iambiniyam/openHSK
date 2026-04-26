@@ -38,44 +38,38 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
       const types: QuestionType[] = ['character-to-meaning', 'meaning-to-character', 'pinyin-to-character', 'character-to-pinyin'];
       const type = types[Math.floor(Math.random() * types.length)];
       
+      const getOptionValue = (e: UnifiedEntry, questionType: QuestionType): string | undefined => {
+        switch (questionType) {
+          case 'character-to-meaning':
+            return e.definitions[0];
+          case 'meaning-to-character':
+            return e.hanzi;
+          case 'pinyin-to-character':
+            return e.hanzi;
+          case 'character-to-pinyin':
+            return e.pinyin;
+          default:
+            return undefined;
+        }
+      };
+
       // Generate wrong options from other entries
       const otherEntries = entries.filter(e => e.id !== entry.id);
-      const wrongOptions = otherEntries
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3)
-        .map(e => {
-          switch (type) {
-            case 'character-to-meaning':
-              return e.definitions[0];
-            case 'meaning-to-character':
-              return e.hanzi;
-            case 'pinyin-to-character':
-              return e.hanzi;
-            case 'character-to-pinyin':
-              return e.pinyin;
-            default:
-              return e.hanzi;
-          }
-        });
-
-      let correctAnswer: string;
-
-      switch (type) {
-        case 'character-to-meaning':
-          correctAnswer = entry.definitions[0];
-          break;
-        case 'meaning-to-character':
-          correctAnswer = entry.hanzi;
-          break;
-        case 'pinyin-to-character':
-          correctAnswer = entry.hanzi;
-          break;
-        case 'character-to-pinyin':
-          correctAnswer = entry.pinyin;
-          break;
-        default:
-          correctAnswer = entry.hanzi;
+      const usedValues = new Set<string>();
+      const wrongOptions: string[] = [];
+      
+      const shuffledOthers = [...otherEntries].sort(() => Math.random() - 0.5);
+      for (const otherEntry of shuffledOthers) {
+        if (wrongOptions.length >= 3) break;
+        const value = getOptionValue(otherEntry, type);
+        if (value && !usedValues.has(value)) {
+          usedValues.add(value);
+          wrongOptions.push(value);
+        }
       }
+
+      const correctAnswer = getOptionValue(entry, type) || entry.hanzi;
+      usedValues.add(correctAnswer);
 
       const options = [correctAnswer, ...wrongOptions].sort(() => Math.random() - 0.5);
 

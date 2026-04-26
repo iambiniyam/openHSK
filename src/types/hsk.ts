@@ -94,7 +94,7 @@ export interface UserStats {
   currentStreak: number;
   longestStreak: number;
   lastStudyDate: string;
-  levelProgress: { [level: number]: { studied: number; total: number } };
+  levelProgress: { [level: string]: { studied: number; total: number } };
 }
 
 export type ViewMode = 'dashboard' | 'vocabulary' | 'character' | 'study' | 'graph' | 'progress';
