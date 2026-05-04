@@ -62,10 +62,10 @@ export const CharacterOfTheDay = ({ onViewDetails }: CharacterOfTheDayProps) => 
             initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            className="text-center shrink-0"
+            className="text-center shrink-0 overflow-hidden"
           >
             <button
-              className="text-7xl sm:text-8xl font-bold bg-gradient-to-br from-primary via-primary to-amber-500 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 cursor-pointer leading-none block"
+              className="text-7xl sm:text-8xl font-bold bg-gradient-to-br from-primary via-primary to-amber-500 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 cursor-pointer leading-none block mx-auto"
               onClick={() => onViewDetails(dailyChar)}
               aria-label={`View details for ${dailyChar.hanzi}`}
             >

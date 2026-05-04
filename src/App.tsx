@@ -1431,11 +1431,13 @@ function App() {
                 const percentage = count > 0 ? (studied / count) * 100 : 0;
                 
                 return (
-                  <div key={level} className="flex items-center gap-4">
-                    <div className="w-20 font-medium">{label}</div>
-                    <Progress value={percentage} className="flex-1 h-3" />
-                    <div className="w-24 text-right text-sm text-muted-foreground">
-                      {studied} / {count}
+                  <div key={level} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4">
+                    <div className="sm:w-20 font-medium text-sm">{label}</div>
+                    <div className="flex items-center gap-3 flex-1">
+                      <Progress value={percentage} className="flex-1 h-3" />
+                      <div className="text-right text-sm text-muted-foreground tabular-nums shrink-0">
+                        {studied} / {count}
+                      </div>
                     </div>
                   </div>
                 );

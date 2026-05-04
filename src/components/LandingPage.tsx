@@ -170,7 +170,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
 
         <motion.div
           variants={fadeUp}
-          className="grid grid-cols-5 sm:grid-cols-5 gap-2 sm:gap-3"
+          className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3"
         >
           {features.map((feature) => {
             const Icon = feature.icon;

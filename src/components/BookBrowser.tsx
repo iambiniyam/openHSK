@@ -265,7 +265,7 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
                       </p>
 
                       {/* Stats row */}
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <BookOpen className="w-3.5 h-3.5" />
                           {book.total_chapters} chapters

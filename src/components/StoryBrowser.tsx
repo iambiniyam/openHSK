@@ -160,7 +160,7 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
             </Select>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             <BookOpen className="w-4 h-4" />
             <span>{filteredStories.length} stories found</span>
             <span className="mx-1">·</span>

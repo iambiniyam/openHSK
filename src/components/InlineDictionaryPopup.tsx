@@ -52,11 +52,11 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
           transition={{ duration: 0.15 }}
           style={{
             position: 'fixed',
-            left: Math.min(position.x, window.innerWidth - 280),
-            top: position.y + 20,
+            left: Math.max(8, Math.min(position.x, window.innerWidth - 272)),
+            top: Math.min(position.y + 20, window.innerHeight - 200),
             zIndex: 100,
           }}
-          className="w-64 bg-card border border-border rounded-xl shadow-xl p-4"
+          className="w-64 max-w-[calc(100vw-16px)] bg-card border border-border rounded-xl shadow-xl p-4"
         >
           <div className="text-center text-muted-foreground text-sm">
             <p className="text-lg font-bold text-foreground mb-1">{hanzi}</p>
@@ -80,11 +80,11 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
         transition={{ duration: 0.15 }}
         style={{
           position: 'fixed',
-          left: Math.min(position.x, window.innerWidth - 320),
-          top: position.y + 20,
+          left: Math.max(8, Math.min(position.x, window.innerWidth - 328)),
+          top: Math.min(position.y + 20, window.innerHeight - 280),
           zIndex: 100,
         }}
-        className="w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden"
+        className="w-80 max-w-[calc(100vw-16px)] bg-card border border-border rounded-xl shadow-xl overflow-hidden"
       >
         {/* Header */}
         <div className="p-4 pb-3">
