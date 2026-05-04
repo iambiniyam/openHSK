@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ExternalLink,
+  CircleHelp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
@@ -25,6 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import type { StoryDataset } from '@/types/stories';
 import type { BookDataset } from '@/types/books';
 import type { ViewMode } from '@/App';
+import { FeatureGuide } from './FeatureGuide';
 import { ttsService, type TtsProvider } from '@/services/ttsService';
 import {
   type AzureTtsConfig,
@@ -90,6 +92,7 @@ export const AppHeader = memo(function AppHeader({
 }: AppHeaderProps) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [featureGuideOpen, setFeatureGuideOpen] = useState(false);
 
   // TTS state
   const [provider, setProvider] = useState<TtsProvider>(() => ttsService.getProvider());
@@ -104,6 +107,12 @@ export const AppHeader = memo(function AppHeader({
     const handler = () => setShortcutsOpen(true);
     window.addEventListener('openhsk:show-shortcuts', handler);
     return () => window.removeEventListener('openhsk:show-shortcuts', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setFeatureGuideOpen(true);
+    window.addEventListener('openhsk:show-feature-guide', handler);
+    return () => window.removeEventListener('openhsk:show-feature-guide', handler);
   }, []);
 
   // Load Azure config into form when dialog opens
@@ -249,6 +258,23 @@ export const AppHeader = memo(function AppHeader({
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 <p>Shortcuts <kbd className="kbd-shortcut ml-1">?</kbd></p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-lg h-9 w-9"
+                  onClick={() => setFeatureGuideOpen(true)}
+                  aria-label="Feature guide"
+                >
+                  <CircleHelp className="w-[18px] h-[18px]" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Feature Guide</p>
               </TooltipContent>
             </Tooltip>
 
@@ -475,6 +501,13 @@ export const AppHeader = memo(function AppHeader({
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Feature Guide */}
+        <FeatureGuide
+          open={featureGuideOpen}
+          onOpenChange={setFeatureGuideOpen}
+          onNavigate={onNavigate}
+        />
       </header>
     </TooltipProvider>
   );
