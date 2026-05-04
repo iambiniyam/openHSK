@@ -60,10 +60,11 @@ class TTSService {
       }
     }
 
-    // Load saved provider preference
+    // Load saved provider preference (browser is always the safe default)
     try {
       const savedProvider = localStorage.getItem('openhsk.tts-provider.v1');
-      if (savedProvider === 'azure' || savedProvider === 'browser' || savedProvider === 'web') {
+      // Only persist 'azure' — browser is default, web is experimental fallback
+      if (savedProvider === 'azure') {
         this.provider = savedProvider;
       }
     } catch {
@@ -207,7 +208,12 @@ class TTSService {
   setProvider(provider: TtsProvider): void {
     this.provider = provider;
     try {
-      localStorage.setItem('openhsk.tts-provider.v1', provider);
+      // Only persist azure; browser is default, web is not persisted
+      if (provider === 'azure') {
+        localStorage.setItem('openhsk.tts-provider.v1', provider);
+      } else {
+        localStorage.removeItem('openhsk.tts-provider.v1');
+      }
     } catch {
       // ignore
     }
