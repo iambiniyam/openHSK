@@ -1,34 +1,31 @@
 /**
  * Free Web TTS using Google Translate's TTS endpoint.
  *
- * This is an unofficial/client-side-only approach that constructs a Google
- * Translate TTS URL and plays it via an <audio> element. No API key, no
- * signup, no backend required.
+ * Approaches (tried in order):
+ * 1. Audio element with referrerPolicy=no-referrer (hides Referer header)
+ * 2. CORS proxy fallback if direct request is blocked
  *
- * Limitations:
- * - Google may block requests from some browsers/networks (Referer check)
- * - Text is limited to ~200 characters per request
- * - Quality is decent but not neural-level
- * - Relies on Google's unofficial endpoint which could change
- *
- * Falls back silently to browser TTS if the audio fails to load.
+ * No API key, no signup, no backend required.
  */
 
 const MAX_CHARS = 200;
+const PROXY_URL = 'https://corsproxy.io/';
 
 function buildGoogleTtsUrl(text: string, lang: string): string {
   const encoded = encodeURIComponent(text);
   return `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encoded}`;
 }
 
+function buildProxiedUrl(text: string, lang: string): string {
+  return `${PROXY_URL}?${encodeURIComponent(buildGoogleTtsUrl(text, lang))}`;
+}
+
 export async function speakWebTts(text: string, lang = 'zh-CN'): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  // Chunk long text
   const chunks: string[] = [];
   if (trimmed.length > MAX_CHARS) {
-    // Try to split at sentence boundaries
     let current = '';
     for (const char of trimmed) {
       if (current.length >= MAX_CHARS && /[。！？.!?;；,，]/.test(char)) {
@@ -45,20 +42,31 @@ export async function speakWebTts(text: string, lang = 'zh-CN'): Promise<void> {
   }
 
   for (const chunk of chunks) {
-    await playAudioChunk(chunk, lang);
+    // Try direct first (with no-referrer), then proxy fallback
+    try {
+      await playAudioChunk(chunk, lang, false);
+    } catch {
+      try {
+        await playAudioChunk(chunk, lang, true);
+      } catch {
+        // Both failed — rethrow so caller can fall back to browser TTS
+        throw new Error('Web TTS failed: blocked by Google. Try Browser TTS or Azure.');
+      }
+    }
   }
 }
 
-function playAudioChunk(text: string, lang: string): Promise<void> {
+function playAudioChunk(text: string, lang: string, useProxy: boolean): Promise<void> {
   return new Promise((resolve, reject) => {
-    const url = buildGoogleTtsUrl(text, lang);
-    const audio = new Audio(url);
+    const url = useProxy ? buildProxiedUrl(text, lang) : buildGoogleTtsUrl(text, lang);
+    const audio = new Audio();
+    audio.src = url;
+    (audio as HTMLAudioElement & { referrerPolicy?: string }).referrerPolicy = 'no-referrer';
 
-    // Set a timeout in case the audio never loads
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error('Web TTS audio load timeout'));
-    }, 8000);
+      reject(new Error('Web TTS timeout'));
+    }, 10000);
 
     const cleanup = () => {
       clearTimeout(timeout);
@@ -81,14 +89,13 @@ function playAudioChunk(text: string, lang: string): Promise<void> {
 
     const onError = () => {
       cleanup();
-      reject(new Error('Web TTS audio failed to load (blocked by browser or network)'));
+      reject(new Error('Audio load error'));
     };
 
     audio.addEventListener('canplaythrough', onCanPlay, { once: true });
     audio.addEventListener('ended', onEnded, { once: true });
     audio.addEventListener('error', onError, { once: true });
 
-    // Preload to trigger loading
     audio.load();
   });
 }
