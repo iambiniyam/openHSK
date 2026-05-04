@@ -33,10 +33,10 @@ const stagger = {
 };
 
 const stats = [
-  { value: '9', label: 'HSK Levels' },
-  { value: '5K+', label: 'Words' },
-  { value: 'Offline', label: 'PWA' },
-  { value: 'Free', label: 'Open Source' },
+  { value: '9', suffix: '', label: 'HSK Levels' },
+  { value: '5K+', suffix: '', label: 'Words' },
+  { value: 'Offline', suffix: '', label: 'PWA' },
+  { value: 'Free', suffix: '', label: 'Open Source' },
 ];
 
 const features = [
@@ -55,11 +55,13 @@ const features = [
 function AnimatedCounter({ value }: { value: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true });
-  const numeric = parseInt(value.replace(/\D/g, ''));
-  const display = isNaN(numeric) ? value : null;
+
+  // If value is purely numeric, animate it. Otherwise just show it.
+  const isPureNumber = /^\d+$/.test(value);
+  const numeric = isPureNumber ? parseInt(value, 10) : NaN;
 
   useEffect(() => {
-    if (!isInView || !ref.current || display) return;
+    if (!isInView || !ref.current || !isPureNumber) return;
     const controls = animate(0, numeric, {
       duration: 1.2,
       ease: 'circOut',
@@ -68,10 +70,9 @@ function AnimatedCounter({ value }: { value: string }) {
       },
     });
     return () => controls.stop();
-  }, [isInView, numeric, display]);
+  }, [isInView, numeric, isPureNumber]);
 
-  if (display) return <span ref={ref}>{display}</span>;
-  return <span ref={ref}>0</span>;
+  return <span ref={ref}>{value}</span>;
 }
 
 export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }: LandingPageProps) => {
@@ -141,6 +142,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
               >
                 <div className="text-xl sm:text-2xl font-extrabold tabular-nums">
                   <AnimatedCounter value={stat.value} />
+                  {stat.suffix}
                 </div>
                 <div className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">
                   {stat.label}
