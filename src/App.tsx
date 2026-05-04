@@ -29,6 +29,7 @@ import {
   GitBranch,
   Sparkles,
   ScrollText,
+  Library,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1314,7 +1315,7 @@ function App() {
         <Card className="p-8">
           <div className="text-center space-y-6">
             <div className="space-y-2">
-              <div className="text-7xl font-bold">{currentEntry.hanzi}</div>
+              <div className="text-5xl sm:text-7xl font-bold">{currentEntry.hanzi}</div>
               <div className="text-2xl text-muted-foreground">{currentEntry.pinyin}</div>
             </div>
             
@@ -1377,7 +1378,7 @@ function App() {
   // Progress View
   const renderProgress = () => (
     <Tabs value={progressTab} onValueChange={(value) => setProgressTab(value as ProgressTab)} className="space-y-4">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
         <TabsTrigger value="stats">Statistics</TabsTrigger>
         <TabsTrigger value="favorites">Favorites</TabsTrigger>
         <TabsTrigger value="grammar">Grammar</TabsTrigger>
@@ -1706,6 +1707,28 @@ function App() {
               <Volume2 className="w-4 h-4" />
               Audio
             </Button>
+            {storyDataset && (
+              <Button
+                variant={currentView === 'stories' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentView('stories')}
+                className="gap-2"
+              >
+                <ScrollText className="w-4 h-4" />
+                Stories
+              </Button>
+            )}
+            {bookDataset && (
+              <Button
+                variant={currentView === 'books' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentView('books')}
+                className="gap-2"
+              >
+                <Library className="w-4 h-4" />
+                Books
+              </Button>
+            )}
           </nav>
 
           {/* Actions */}
@@ -1753,42 +1776,39 @@ function App() {
 
       {/* Mobile Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-50 pb-safe">
-        <div className="flex justify-around p-2">
-          <Button
-            variant={currentView === 'landing' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setCurrentView('landing')}
-          >
-            <img src="/brand/logo-mark.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" />
-          </Button>
-          <Button
-            variant={currentView === 'dashboard' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setCurrentView('dashboard')}
-          >
-            <img src="/brand/icons/dictionary-stack.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" />
-          </Button>
-          <Button
-            variant={currentView === 'browse' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setCurrentView('browse')}
-          >
-            <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" />
-          </Button>
-          <Button
-            variant={currentView === 'progress' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setCurrentView('progress')}
-          >
-            <BarChart3 className="w-5 h-5" />
-          </Button>
-          <Button
-            variant={currentView === 'audio' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setCurrentView('audio')}
-          >
-            <Volume2 className="w-5 h-5" />
-          </Button>
+        <div className="flex justify-around items-center p-1.5 gap-1 overflow-x-auto">
+          {[
+            { view: 'landing' as const, label: 'Start', icon: <img src="/brand/logo-mark.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
+            { view: 'dashboard' as const, label: 'Home', icon: <img src="/brand/icons/dictionary-stack.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
+            { view: 'browse' as const, label: 'Browse', icon: <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
+            { view: 'progress' as const, label: 'Progress', icon: <BarChart3 className="w-5 h-5" /> },
+            { view: 'audio' as const, label: 'Audio', icon: <Volume2 className="w-5 h-5" /> },
+            ...(storyDataset ? [{ view: 'stories' as const, label: 'Stories', icon: <ScrollText className="w-5 h-5" /> }] : []),
+            ...(bookDataset ? [{ view: 'books' as const, label: 'Books', icon: <Library className="w-5 h-5" /> }] : []),
+          ].map((item) => {
+            const active = currentView === item.view;
+            return (
+              <Button
+                key={item.view}
+                variant={active ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentView(item.view)}
+                className={`flex-col h-14 min-w-[64px] flex-1 gap-0.5 rounded-xl transition-all duration-200 ${
+                  active
+                    ? 'bg-primary/10 text-primary shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+                aria-label={item.label}
+                aria-current={active ? 'page' : undefined}
+              >
+                <span className={`transition-transform duration-200 ${active ? 'scale-110' : ''}`}>{item.icon}</span>
+                <span className="text-[10px] font-medium leading-none">{item.label}</span>
+                {active && (
+                  <span className="absolute bottom-1 w-1 h-1 rounded-full bg-primary" aria-hidden="true" />
+                )}
+              </Button>
+            );
+          })}
         </div>
       </nav>
 
