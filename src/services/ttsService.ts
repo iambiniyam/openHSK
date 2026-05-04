@@ -20,6 +20,7 @@ class TTSService {
   private englishVoices: SpeechSynthesisVoice[] = [];
   private rate: number = 1;
   private preferredVoice: SpeechSynthesisVoice | null = null;
+  private preferredVoiceName: string | null = null;
   private provider: TtsProvider = 'browser';
   private azureConfig: AzureTtsConfig | null = null;
 
@@ -51,7 +52,7 @@ class TTSService {
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
-      this.loadVoices();
+      this.loadVoicesWithRetry();
 
       if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => this.loadVoices();
@@ -63,6 +64,16 @@ class TTSService {
       const savedProvider = localStorage.getItem('openhsk.tts-provider.v1');
       if (savedProvider === 'azure' || savedProvider === 'browser') {
         this.provider = savedProvider;
+      }
+    } catch {
+      // ignore
+    }
+
+    // Load saved voice preference
+    try {
+      const savedVoiceName = localStorage.getItem('openhsk.tts-voice.v1');
+      if (savedVoiceName) {
+        this.preferredVoiceName = savedVoiceName;
       }
     } catch {
       // ignore
@@ -83,6 +94,17 @@ class TTSService {
     );
 
     if (this.chineseVoices.length > 0) {
+      // If user has a saved voice preference, try to find it
+      if (this.preferredVoiceName) {
+        const saved = this.chineseVoices.find(
+          (v) => v.name === this.preferredVoiceName,
+        );
+        if (saved) {
+          this.preferredVoice = saved;
+          return;
+        }
+      }
+
       const ranked = [...this.chineseVoices].sort((a, b) => {
         const score = (voice: SpeechSynthesisVoice) => {
           const id = `${voice.name} ${voice.lang}`.toLowerCase();
@@ -108,6 +130,19 @@ class TTSService {
       });
 
       this.preferredVoice = ranked[0] || null;
+    }
+  }
+
+  /**
+   * iOS Safari and some Android browsers return an empty voice list on first call.
+   * We retry with exponential backoff until voices are available.
+   */
+  private loadVoicesWithRetry(attempt = 0): void {
+    this.loadVoices();
+
+    if (this.chineseVoices.length === 0 && attempt < 10) {
+      const delay = Math.min(100 + attempt * 100, 1000);
+      setTimeout(() => this.loadVoicesWithRetry(attempt + 1), delay);
     }
   }
 
@@ -145,6 +180,23 @@ class TTSService {
 
   setVoice(voice: SpeechSynthesisVoice): void {
     this.preferredVoice = voice;
+    this.preferredVoiceName = voice.name;
+    try {
+      localStorage.setItem('openhsk.tts-voice.v1', voice.name);
+    } catch {
+      // ignore
+    }
+  }
+
+  setVoiceByName(name: string): void {
+    const voice = this.voices.find((v) => v.name === name);
+    if (voice) {
+      this.setVoice(voice);
+    }
+  }
+
+  getVoiceList(): SpeechSynthesisVoice[] {
+    return this.chineseVoices;
   }
 
   getProvider(): TtsProvider {
@@ -245,6 +297,14 @@ class TTSService {
   getBestVoiceName(): string {
     if (!this.preferredVoice) return 'None';
     return this.preferredVoice.name;
+  }
+
+  /**
+   * Force a voice reload — useful when the user opens settings
+   * and voices may have become available since page load.
+   */
+  refreshVoices(): void {
+    this.loadVoicesWithRetry();
   }
 
   private speakUtterance(text: string, signal?: AbortSignal): Promise<void> {

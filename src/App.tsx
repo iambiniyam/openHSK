@@ -12,6 +12,7 @@ import {
   Trophy,
   Target,
   Volume2,
+  Mic,
   ChevronRight,
   RotateCcw,
   CheckCircle2,
@@ -291,6 +292,16 @@ function App() {
   const [ttsRate, setTtsRate] = useState(initialSession?.ttsRate || 1);
   const [showPomodoro, setShowPomodoro] = useState(false);
   const [exportData, setExportData] = useState('');
+
+  // TTS voice state
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>(() => {
+    if (typeof window !== 'undefined') {
+      ttsService.refreshVoices();
+    }
+    return ttsService.getVoiceList();
+  });
+  const [selectedVoiceName, setSelectedVoiceName] = useState(() => ttsService.getBestVoiceName());
+  const [voiceQuality, setVoiceQuality] = useState(() => ttsService.getVoiceQualityLabel());
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState('');
 
@@ -1737,22 +1748,32 @@ function App() {
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
             
-            <Dialog>
+            <Dialog
+              onOpenChange={(open) => {
+                if (open) {
+                  ttsService.refreshVoices();
+                  setAvailableVoices(ttsService.getVoiceList());
+                  setSelectedVoiceName(ttsService.getBestVoiceName());
+                  setVoiceQuality(ttsService.getVoiceQualityLabel());
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Settings className="w-5 h-5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Settings</DialogTitle>
                   <DialogDescription>Customize your learning experience</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
+                  {/* Voice Speed */}
                   <div className="space-y-2">
-                    <Label>Voice Speed</Label>
+                    <Label className="text-sm font-medium">Voice Speed</Label>
                     <div className="flex items-center gap-4">
-                      <span className="text-sm">0.5x</span>
+                      <span className="text-sm text-muted-foreground">0.5x</span>
                       <Slider
                         value={[ttsRate]}
                         onValueChange={([v]) => setTtsRate(v)}
@@ -1761,12 +1782,77 @@ function App() {
                         step={0.25}
                         className="flex-1"
                       />
-                      <span className="text-sm">2x</span>
+                      <span className="text-sm text-muted-foreground">2x</span>
                     </div>
                     <div className="text-center text-sm text-muted-foreground">
                       Current: {ttsRate}x
                     </div>
                   </div>
+
+                  {/* Voice Quality Indicator */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Voice Quality</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={voiceQuality.score >= 80 ? 'default' : voiceQuality.score >= 50 ? 'secondary' : 'destructive'}
+                        className="text-xs"
+                      >
+                        {voiceQuality.label}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {voiceQuality.description}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Voice Picker */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Chinese Voice</Label>
+                    <Select
+                      value={selectedVoiceName}
+                      onValueChange={(name) => {
+                        ttsService.setVoiceByName(name);
+                        setSelectedVoiceName(name);
+                        setVoiceQuality(ttsService.getVoiceQualityLabel());
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a voice..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableVoices.length === 0 ? (
+                          <SelectItem value="none" disabled>
+                            No voices available — try reloading the page
+                          </SelectItem>
+                        ) : (
+                          availableVoices.map((voice) => (
+                            <SelectItem key={voice.name} value={voice.name}>
+                              {voice.name} ({voice.lang})
+                              {voice.default && ' • Default'}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {availableVoices.length === 0 && (
+                      <p className="text-xs text-amber-600">
+                        No Chinese voices detected. On iOS, go to Settings → Accessibility → Spoken Content → Voices → Chinese to download higher-quality voices.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Test Voice */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      ttsService.speak('你好，欢迎使用 OpenHSK。');
+                    }}
+                  >
+                    <Mic className="w-4 h-4 mr-2" />
+                    Test Voice
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
