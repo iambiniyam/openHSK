@@ -14,6 +14,10 @@
     "preview": "vite preview",
     "data:prepare:quality": "node scripts/data/build-quality-dataset.mjs",
     "data:prepare:examples": "node scripts/data/build-example-dataset.mjs",
+    "data:prepare:stories": "node scripts/data/build-story-dataset.mjs",
+    "data:prepare:stories:test": "node scripts/data/build-story-dataset.mjs test",
+    "data:prepare:books": "node scripts/data/build-book-dataset.mjs",
+    "data:prepare:books:test": "node scripts/data/build-book-dataset.mjs test",
     "deploy:pages": "wrangler pages deploy dist --project-name openhsk",
     "deploy:pages:prod": "wrangler pages deploy dist --project-name openhsk --branch main"
   },

@@ -30,6 +30,11 @@ class HSKDataService {
     levelProgress: {}
   };
 
+  // Performance caches
+  private cachedDueReviews: StudyProgress[] | null = null;
+  private pendingSave = false;
+  private levelStudiedCounts: Map<number, number> = new Map();
+
   async loadData(): Promise<void> {
     try {
       this.data = await loadHskDataset<HSKEntry>();
@@ -274,18 +279,40 @@ class HSKDataService {
       if (savedDailyStats) {
         this.dailyStats = JSON.parse(savedDailyStats);
       }
+      this.rebuildLevelStudiedCounts();
+      this.cachedDueReviews = null;
     } catch (e) {
       console.error('Failed to load progress:', e);
     }
   }
 
   private saveProgressToStorage(): void {
-    try {
-      const obj = Object.fromEntries(this.progress);
-      localStorage.setItem('hsk_progress', JSON.stringify(obj));
-      localStorage.setItem('hsk_stats', JSON.stringify(this.stats));
-    } catch (e) {
-      console.error('Failed to save progress:', e);
+    if (this.pendingSave) return;
+    this.pendingSave = true;
+
+    const doSave = () => {
+      try {
+        const obj = Object.fromEntries(this.progress);
+        localStorage.setItem('hsk_progress', JSON.stringify(obj));
+        localStorage.setItem('hsk_stats', JSON.stringify(this.stats));
+      } catch (e) {
+        console.error('Failed to save progress:', e);
+      } finally {
+        this.pendingSave = false;
+      }
+    };
+
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(doSave);
+    } else {
+      setTimeout(doSave, 0);
+    }
+  }
+
+  private rebuildLevelStudiedCounts(): void {
+    this.levelStudiedCounts.clear();
+    for (const p of this.progress.values()) {
+      this.levelStudiedCounts.set(p.level, (this.levelStudiedCounts.get(p.level) || 0) + 1);
     }
   }
 
@@ -297,8 +324,7 @@ class HSKDataService {
 
     for (let i = 1; i <= 9; i++) {
       const total = this.getEntriesByLevel(i).length;
-      const studied = Array.from(this.progress.values())
-        .filter(p => p.level === i).length;
+      const studied = this.levelStudiedCounts.get(i) || 0;
 
       levelStats[String(i)] = { studied, total };
 
@@ -351,24 +377,31 @@ class HSKDataService {
       });
       this.stats.totalStudied++;
       this.incrementNewWords();
+      const level = entry.source.level;
+      this.levelStudiedCounts.set(level, (this.levelStudiedCounts.get(level) || 0) + 1);
     }
 
+    this.cachedDueReviews = null;
     this.updateStreak();
     this.calculateLevelProgress();
     this.saveProgressToStorage();
   }
 
+  private getLocalDayStart(date: Date): number {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  }
+
   private updateStreak(): void {
-    const today = new Date().toISOString().split('T')[0];
-    const lastDate = this.stats.lastStudyDate;
+    const todayStart = this.getLocalDayStart(new Date());
+    const lastDate = parseInt(this.stats.lastStudyDate, 10) || 0;
     
-    if (lastDate === today) return;
+    if (lastDate === todayStart) return;
     
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStart = this.getLocalDayStart(yesterday);
     
-    if (lastDate === yesterdayStr) {
+    if (lastDate === yesterdayStart) {
       this.stats.currentStreak++;
     } else {
       this.stats.currentStreak = 1;
@@ -378,7 +411,7 @@ class HSKDataService {
       this.stats.longestStreak = this.stats.currentStreak;
     }
     
-    this.stats.lastStudyDate = today;
+    this.stats.lastStudyDate = String(todayStart);
   }
 
   getUserStats(): UserStats {
@@ -386,10 +419,14 @@ class HSKDataService {
   }
 
   getDueReviews(): StudyProgress[] {
+    if (this.cachedDueReviews !== null) {
+      return this.cachedDueReviews;
+    }
     const now = Date.now();
-    return Array.from(this.progress.values())
+    this.cachedDueReviews = Array.from(this.progress.values())
       .filter(p => p.nextReview <= now)
       .sort((a, b) => a.nextReview - b.nextReview);
+    return this.cachedDueReviews;
   }
 
   getRecommendedEntries(count: number): HSKEntry[] {
@@ -405,6 +442,15 @@ class HSKDataService {
       entryIds.push(...newEntries.map(e => e.entry_id));
     }
 
+    if (entryIds.length < count) {
+      // Fill remaining slots with random words from any level
+      const remaining = count - entryIds.length;
+      const usedIds = new Set(entryIds);
+      const pool = this.data.filter(e => !usedIds.has(e.entry_id));
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      entryIds.push(...shuffled.slice(0, remaining).map(e => e.entry_id));
+    }
+
     return entryIds.map(id => this.getEntryById(id)).filter(Boolean) as HSKEntry[];
   }
 
@@ -412,8 +458,7 @@ class HSKDataService {
     // Find the level with the most unstudied entries
     for (let i = 1; i <= 9; i++) {
       const total = this.getEntriesByLevel(i).length;
-      const studied = Array.from(this.progress.values())
-        .filter(p => p.level === i).length;
+      const studied = this.levelStudiedCounts.get(i) || 0;
       if (studied < total * 0.8) return i;
     }
     return 1;
@@ -431,27 +476,74 @@ class HSKDataService {
     return JSON.stringify(data, null, 2);
   }
 
+  private isValidProgressEntry(value: unknown): value is StudyProgress {
+    if (!value || typeof value !== 'object') return false;
+    const p = value as Record<string, unknown>;
+    return (
+      typeof p.entryId === 'string' &&
+      typeof p.level === 'number' &&
+      typeof p.lastReviewed === 'number' &&
+      typeof p.nextReview === 'number' &&
+      typeof p.confidence === 'number' &&
+      typeof p.reviewCount === 'number' &&
+      typeof p.correctCount === 'number'
+    );
+  }
+
+  private isValidDailyStats(value: unknown): value is DailyStats {
+    if (!value || typeof value !== 'object') return false;
+    const d = value as Record<string, unknown>;
+    return (
+      typeof d.date === 'string' &&
+      typeof d.newWordsLearned === 'number' &&
+      typeof d.wordsReviewed === 'number' &&
+      typeof d.studyTimeMinutes === 'number' &&
+      typeof d.quizzesCompleted === 'number' &&
+      typeof d.writingExercises === 'number'
+    );
+  }
+
+  private isValidUserStats(value: unknown): value is UserStats {
+    if (!value || typeof value !== 'object') return false;
+    const s = value as Record<string, unknown>;
+    return (
+      typeof s.totalStudied === 'number' &&
+      typeof s.currentStreak === 'number' &&
+      typeof s.longestStreak === 'number' &&
+      typeof s.lastStudyDate === 'string' &&
+      (!s.levelProgress || typeof s.levelProgress === 'object')
+    );
+  }
+
   importData(jsonString: string): boolean {
     try {
       const data = JSON.parse(jsonString);
-      
-      if (data.progress) {
-        this.progress = new Map(Object.entries(data.progress));
+      if (!data || typeof data !== 'object') {
+        console.error('Import data is not a valid object');
+        return false;
       }
-      if (data.stats) {
+
+      if (data.progress && typeof data.progress === 'object') {
+        const entries = Object.entries(data.progress).filter(([, v]) => this.isValidProgressEntry(v)) as [string, StudyProgress][];
+        this.progress = new Map(entries);
+        this.rebuildLevelStudiedCounts();
+      }
+      if (data.stats && this.isValidUserStats(data.stats)) {
         this.stats = data.stats;
       }
-      if (data.favorites) {
+      if (Array.isArray(data.favorites) && data.favorites.every((f: unknown) => typeof f === 'string')) {
         this.favorites = new Set(data.favorites);
       }
-      if (data.dailyStats) {
+      if (data.dailyStats && this.isValidDailyStats(data.dailyStats)) {
         this.dailyStats = data.dailyStats;
       }
-      
+
+      this.cachedDueReviews = null;
+      this.calculateLevelProgress();
       this.saveProgressToStorage();
       this.saveFavoritesToStorage();
       this.saveDailyStatsToStorage();
-      
+
       return true;
     } catch (e) {
       console.error('Failed to import data:', e);
@@ -462,6 +554,8 @@ class HSKDataService {
   resetProgress(): void {
     this.progress.clear();
     this.favorites.clear();
+    this.levelStudiedCounts.clear();
+    this.cachedDueReviews = null;
     this.stats = {
       totalStudied: 0,
       currentStreak: 0,

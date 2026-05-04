@@ -15,9 +15,9 @@ export default defineConfig(() => ({
       manifest: {
         name: 'OpenHSK',
         short_name: 'OpenHSK',
-        description: 'Chinese learning app with HSK vocabulary, pinyin, stroke order, and quizzes.',
+        description: 'Beautiful Chinese learning app with HSK vocabulary, pinyin, stroke order, quizzes, stories, and daily goals.',
         theme_color: '#c2410c',
-        background_color: '#fff7ed',
+        background_color: '#faf8f5',
         display: 'standalone',
         scope: '/',
         start_url: '/',
@@ -110,6 +110,12 @@ export default defineConfig(() => ({
           }
           if (id.includes('framer-motion')) {
             return 'motion-vendor';
+          }
+          if (id.includes('recharts')) {
+            return 'charts-vendor';
+          }
+          if (id.includes('lucide-react')) {
+            return 'icons-vendor';
           }
 
           return 'vendor';

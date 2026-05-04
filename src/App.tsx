@@ -45,14 +45,20 @@ import { unifiedDictionary, type UnifiedEntry } from '@/services/unifiedDictiona
 import { hskDataService } from '@/services/hskDataService';
 import { ttsService } from '@/services/ttsService';
 import { scheduleRuntimeWarmup } from '@/lib/runtimeWarmup';
+import { fetchWithCacheFallback } from '@/lib/offlineFetch';
 import type { UserStats } from '@/types/hsk';
-import { AudioPlaylist } from '@/components/AudioPlaylist';
+import type { StoryEntry, StoryDataset } from '@/types/stories';
+import type { Book, BookDataset } from '@/types/books';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { TopProgressBar } from '@/components/TopProgressBar';
+import type { ProgressUpdate } from '@/lib/progressiveLoader';
 
 import './App.css';
 
-type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress' | 'audio';
+export type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress' | 'audio' | 'stories' | 'books';
 type ListViewMode = 'paginated' | 'virtualized';
-type ProgressTab = 'stats' | 'favorites' | 'grammar' | 'data';
+export type ProgressTab = 'stats' | 'favorites' | 'grammar' | 'data';
 
 const APP_SESSION_STORAGE_KEY = 'openhsk.ui-session.v1';
 const MAX_PERSISTED_DETAIL_SEQUENCE = 180;
@@ -193,6 +199,11 @@ const buildDetailSequenceWindow = (sequence: UnifiedEntry[], selectedId: string)
 };
 
 const LandingPage = lazy(() => import('@/components/LandingPage'));
+const AudioPlaylist = lazy(() => import('@/components/AudioPlaylist').then((m) => ({ default: m.AudioPlaylist })));
+const StoryBrowser = lazy(() => import('@/components/StoryBrowser'));
+const StoryViewer = lazy(() => import('@/components/StoryViewer'));
+const BookBrowser = lazy(() => import('@/components/BookBrowser'));
+const BookReader = lazy(() => import('@/components/BookReader'));
 const VirtualizedWordList = lazy(() => import('@/components/VirtualizedWordList'));
 const PaginatedWordList = lazy(() => import('@/components/PaginatedWordList'));
 const WordDetail = lazy(() => import('@/components/WordDetail'));
@@ -234,6 +245,8 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewMode>(initialSession?.currentView || 'landing');
   const [loading, setLoading] = useState(true);
   const [dictionaryReady, setDictionaryReady] = useState(false);
+  const [loadProgress, setLoadProgress] = useState<ProgressUpdate | null>(null);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
   const [entries, setEntries] = useState<UnifiedEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<UnifiedEntry | null>(null);
   const [detailSequence, setDetailSequence] = useState<UnifiedEntry[]>([]);
@@ -278,23 +291,45 @@ function App() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState('');
 
-  // Initialize
+  // Stories state
+  const [storyDataset, setStoryDataset] = useState<StoryDataset | null>(null);
+  const [storyView, setStoryView] = useState<'browse' | 'reader'>('browse');
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [bookDataset, setBookDataset] = useState<BookDataset | null>(null);
+  const [bookView, setBookView] = useState<'browse' | 'reader'>('browse');
+  const [currentBookIndex, setCurrentBookIndex] = useState(0);
+
+  // Initialize — app shell pattern
   useEffect(() => {
     let disposed = false;
 
     const init = async () => {
-      // Render shell quickly, then hydrate heavy data in background.
+      // Immediately reveal app shell so landing page is interactive.
       setLoading(false);
+      setShowLoadingScreen(true);
+
+      // Start dictionary load with real-time progress in background.
+      const dictPromise = unifiedDictionary.initializeWithProgress((update) => {
+        if (!disposed) {
+          setLoadProgress(update);
+        }
+      });
+
+      // Also start hskDataService (will hit cache after dict fetch).
+      const hskPromise = hskDataService.loadData();
 
       try {
-        await Promise.all([unifiedDictionary.initialize(), hskDataService.loadData()]);
+        await dictPromise;
         if (disposed) return;
-        
+
+        await hskPromise;
+        if (disposed) return;
+
         const allEntries = unifiedDictionary.getAllEntries();
         setEntries(allEntries);
         setSearchResults(allEntries);
         searchCacheRef.current.clear();
-        
+
         setUserStats(hskDataService.getUserStats());
         setDueCount(hskDataService.getDueReviews().length);
         setFavorites(hskDataService.getFavorites());
@@ -361,12 +396,35 @@ function App() {
           setDictionaryReady(false);
         }
       }
+
+      // Load stories dataset in background (non-blocking)
+      try {
+        const res = await fetchWithCacheFallback('/quality/hsk-stories.v1.json');
+        const data = await res.json() as StoryDataset;
+        if (!disposed && data?.stories?.length) {
+          setStoryDataset(data);
+        }
+      } catch {
+        // Stories are optional; app works without them
+      }
+
+      // Load books dataset in background (non-blocking)
+      try {
+        const res = await fetchWithCacheFallback('/quality/hsk-books.v1.json');
+        const data = await res.json() as BookDataset;
+        if (!disposed && data?.books?.length) {
+          setBookDataset(data);
+        }
+      } catch {
+        // Books are optional; app works without them
+      }
     };
 
     init();
 
     return () => {
       disposed = true;
+      unifiedDictionary.abortLoad();
     };
   }, [initialSession]);
 
@@ -576,7 +634,9 @@ function App() {
   }, []);
 
   const startStudySession = useCallback(() => {
-    const recommended = unifiedDictionary.getRandomEntries(20);
+    const recommended = hskDataService.getRecommendedEntries(20)
+      .map((hsk) => unifiedDictionary.getEntry(hsk.entry_id))
+      .filter((entry): entry is UnifiedEntry => Boolean(entry));
     setStudyEntries(recommended);
     setCurrentStudyIndex(0);
     setShowAnswer(false);
@@ -616,23 +676,14 @@ function App() {
     }
   }, [importData, refreshStats]);
 
-  // Loading screen
-  if (loading) {
+  // Loading screen — shown until user dismisses it or data is ready
+  if (showLoadingScreen && !dictionaryReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="mx-auto h-20 w-20 rounded-2xl border border-primary/20 bg-card/80 p-3 shadow-sm">
-            <img src="/brand/logo-mark.svg" alt="OpenHSK logo" className="h-full w-full" loading="eager" />
-          </div>
-          <motion.div 
-            className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full mx-auto"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          />
-          <p className="text-muted-foreground text-lg">Loading dictionary...</p>
-          <p className="text-sm text-muted-foreground">This may take a moment</p>
-        </div>
-      </div>
+      <LoadingScreen
+        progress={loadProgress}
+        onEnterApp={() => setShowLoadingScreen(false)}
+        canEnterEarly={true}
+      />
     );
   }
 
@@ -1325,6 +1376,140 @@ function App() {
     </Tabs>
   );
 
+  // Stories View
+  const renderStories = () => {
+    if (!storyDataset) {
+      return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <SectionLoader label="Loading story dataset..." />
+        </motion.div>
+      );
+    }
+
+    if (storyView === 'reader' && storyDataset) {
+      const story = storyDataset.stories[currentStoryIndex];
+      if (!story) return null;
+
+      const handleWordClick = (hanzi: string) => {
+        const entry = unifiedDictionary.getEntryByHanzi(hanzi);
+        if (entry) {
+          openDetailView(entry, { sequence: [entry], returnView: 'stories' });
+        }
+      };
+
+      return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setStoryView('browse')}>
+              ← Back to Stories
+            </Button>
+          </div>
+          <Suspense fallback={<SectionLoader label="Loading story..." />}>
+            <StoryViewer
+              story={story}
+              hasPrevious={currentStoryIndex > 0}
+              hasNext={currentStoryIndex < storyDataset.stories.length - 1}
+              storyIndex={currentStoryIndex}
+              totalStories={storyDataset.stories.length}
+              onWordClick={handleWordClick}
+              onPrevious={() => setCurrentStoryIndex((i) => Math.max(0, i - 1))}
+              onNext={() =>
+                setCurrentStoryIndex((i) =>
+                  Math.min(storyDataset.stories.length - 1, i + 1)
+                )
+              }
+            />
+          </Suspense>
+        </motion.div>
+      );
+    }
+
+    const handleStorySelect = (_story: StoryEntry, index: number) => {
+      setCurrentStoryIndex(index);
+      setStoryView('reader');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <Suspense fallback={<SectionLoader label="Loading story browser..." />}>
+          <StoryBrowser
+            stories={storyDataset.stories}
+            meta={storyDataset.meta}
+            onStorySelect={handleStorySelect}
+          />
+        </Suspense>
+      </motion.div>
+    );
+  };
+
+  // Books View
+  const renderBooks = () => {
+    if (!bookDataset) {
+      return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <SectionLoader label="Loading book dataset..." />
+        </motion.div>
+      );
+    }
+
+    if (bookView === 'reader' && bookDataset) {
+      const book = bookDataset.books[currentBookIndex];
+      if (!book) return null;
+
+      const handleWordClick = (hanzi: string) => {
+        const entry = unifiedDictionary.getEntryByHanzi(hanzi);
+        if (entry) {
+          openDetailView(entry, { sequence: [entry], returnView: 'books' });
+        }
+      };
+
+      return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={() => setBookView('browse')}>
+              ← Back to Books
+            </Button>
+          </div>
+          <Suspense fallback={<SectionLoader label="Loading book..." />}>
+            <BookReader
+              book={book}
+              hasPrevious={currentBookIndex > 0}
+              hasNext={currentBookIndex < bookDataset.books.length - 1}
+              bookIndex={currentBookIndex}
+              totalBooks={bookDataset.books.length}
+              onWordClick={handleWordClick}
+              onPrevious={() => setCurrentBookIndex((i) => Math.max(0, i - 1))}
+              onNext={() =>
+                setCurrentBookIndex((i) =>
+                  Math.min(bookDataset.books.length - 1, i + 1)
+                )
+              }
+            />
+          </Suspense>
+        </motion.div>
+      );
+    }
+
+    const handleBookSelect = (_book: Book, index: number) => {
+      setCurrentBookIndex(index);
+      setBookView('reader');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <Suspense fallback={<SectionLoader label="Loading book browser..." />}>
+          <BookBrowser
+            books={bookDataset.books}
+            meta={bookDataset.meta}
+            onBookSelect={handleBookSelect}
+          />
+        </Suspense>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background brand-atmosphere">
       {/* Header */}
@@ -1481,33 +1666,43 @@ function App() {
         </div>
       </nav>
 
+      {/* Subtle top progress when data loads in background */}
+      <TopProgressBar
+        progress={loadProgress?.overallProgress ?? 0}
+        visible={!showLoadingScreen && !dictionaryReady}
+      />
+
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 overflow-x-hidden">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentView}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {currentView === 'landing' ? (
-              renderLanding()
-            ) : !dictionaryReady ? (
-              <SectionLoader label="Preparing your HSK data for this section..." />
-            ) : (
-              <>
-                {currentView === 'dashboard' && renderDashboard()}
-                {currentView === 'browse' && renderBrowse()}
-                {currentView === 'detail' && renderDetail()}
-                {currentView === 'study' && renderStudy()}
-                {currentView === 'progress' && renderProgress()}
-                {currentView === 'audio' && <AudioPlaylist />}
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+      <ErrorBoundary>
+        <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 overflow-x-hidden">
+          <AnimatePresence>
+            <motion.div
+              key={currentView}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.15 }}
+            >
+              {currentView === 'landing' ? (
+                renderLanding()
+              ) : !dictionaryReady ? (
+                <SectionLoader label="Preparing your HSK data for this section..." />
+              ) : (
+                <>
+                  {currentView === 'dashboard' && renderDashboard()}
+                  {currentView === 'browse' && renderBrowse()}
+                  {currentView === 'detail' && renderDetail()}
+                  {currentView === 'study' && renderStudy()}
+                  {currentView === 'progress' && renderProgress()}
+                  {currentView === 'audio' && <AudioPlaylist />}
+                  {currentView === 'stories' && renderStories()}
+                  {currentView === 'books' && renderBooks()}
+                </>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </ErrorBoundary>
 
       {/* Import Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>

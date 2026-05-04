@@ -4,89 +4,247 @@
 
 @layer base {
   :root {
-    --background: 24 100% 97%;
-    --foreground: 217 32% 17%;
+    /* ── Refined Warm Palette ── */
+    --background: 30 30% 97%;
+    --foreground: 220 25% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 217 32% 17%;
+    --card-foreground: 220 25% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 217 32% 17%;
-    --primary: 10 65% 47%;
+    --popover-foreground: 220 25% 14%;
+    --primary: 14 72% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 12 85% 94%;
-    --secondary-foreground: 20 74% 28%;
-    --muted: 20 45% 94%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 15 88% 94%;
-    --accent-foreground: 20 74% 28%;
-    --destructive: 0 70% 42%;
+    --secondary: 25 60% 94%;
+    --secondary-foreground: 18 70% 24%;
+    --muted: 25 30% 93%;
+    --muted-foreground: 215 14% 45%;
+    --accent: 20 55% 94%;
+    --accent-foreground: 18 70% 22%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 21 38% 86%;
-    --input: 21 38% 86%;
-    --ring: 12 67% 55%;
-    --radius: 0.625rem;
-    --sidebar-background: 20 67% 97%;
-    --sidebar-foreground: 217 32% 17%;
-    --sidebar-primary: 10 65% 47%;
+    --border: 24 28% 84%;
+    --input: 24 28% 84%;
+    --ring: 14 72% 52%;
+    --radius: 0.75rem;
+    --sidebar-background: 30 30% 97%;
+    --sidebar-foreground: 220 25% 14%;
+    --sidebar-primary: 14 72% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 12 85% 94%;
-    --sidebar-accent-foreground: 20 74% 28%;
-    --sidebar-border: 21 38% 86%;
-    --sidebar-ring: 12 67% 55%;
+    --sidebar-accent: 25 60% 94%;
+    --sidebar-accent-foreground: 18 70% 24%;
+    --sidebar-border: 24 28% 84%;
+    --sidebar-ring: 14 72% 52%;
+
+    /* ── HSK Semantic Colors ── */
+    --hsk-1: 142 71% 45%;
+    --hsk-2: 217 91% 60%;
+    --hsk-3: 45 93% 47%;
+    --hsk-4: 24 95% 53%;
+    --hsk-5: 270 60% 55%;
+    --hsk-6: 330 75% 55%;
+    --hsk-7: 25 90% 55%;
+
+    /* ── Tone Colors ── */
+    --tone-1: 0 84% 60%;
+    --tone-2: 24 95% 53%;
+    --tone-3: 142 71% 45%;
+    --tone-4: 217 91% 60%;
+    --tone-5: 220 9% 46%;
+
+    /* ── Status Colors ── */
+    --status-online: 142 71% 45%;
+    --status-warning: 45 93% 47%;
+    --status-offline: 0 84% 60%;
+
+    /* ── Motion Tokens ── */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.2, 0, 0, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
   }
 
   .dark {
-    --background: 221 39% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222 35% 16%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 35% 16%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 12 67% 55%;
+    --background: 220 24% 8%;
+    --foreground: 210 30% 96%;
+    --card: 220 20% 11%;
+    --card-foreground: 210 30% 96%;
+    --popover: 220 20% 11%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 16 78% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 27% 22%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 220 29% 18%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 10 32% 22%;
-    --accent-foreground: 22 100% 96%;
-    --destructive: 0 70% 45%;
+    --secondary: 220 18% 16%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 220 16% 14%;
+    --muted-foreground: 215 14% 60%;
+    --accent: 14 35% 18%;
+    --accent-foreground: 25 90% 94%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 23% 22%;
-    --input: 220 23% 22%;
-    --ring: 12 67% 55%;
-    --sidebar-background: 221 39% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 12 67% 55%;
+    --border: 220 14% 20%;
+    --input: 220 14% 20%;
+    --ring: 16 78% 55%;
+    --sidebar-background: 220 24% 8%;
+    --sidebar-foreground: 210 30% 96%;
+    --sidebar-primary: 16 78% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 27% 22%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 220 23% 22%;
-    --sidebar-ring: 12 67% 55%;
+    --sidebar-accent: 220 18% 16%;
+    --sidebar-accent-foreground: 210 30% 96%;
+    --sidebar-border: 220 14% 20%;
+    --sidebar-ring: 16 78% 55%;
+
+    /* Dark HSK semantic colors */
+    --hsk-1: 142 65% 55%;
+    --hsk-2: 217 80% 65%;
+    --hsk-3: 45 85% 55%;
+    --hsk-4: 24 90% 60%;
+    --hsk-5: 270 55% 65%;
+    --hsk-6: 330 65% 65%;
+    --hsk-7: 25 85% 60%;
+
+    /* Dark tone colors */
+    --tone-1: 0 80% 75%;
+    --tone-2: 24 90% 70%;
+    --tone-3: 142 60% 65%;
+    --tone-4: 217 80% 75%;
+    --tone-5: 220 10% 70%;
+
+    /* Dark status colors */
+    --status-online: 142 65% 55%;
+    --status-warning: 45 85% 55%;
+    --status-offline: 0 80% 65%;
   }
+}
+
+/* Smooth dark mode transitions */
+:root,
+:root *,
+:root *::before,
+:root *::after {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    fill 0.2s ease,
+    stroke 0.2s ease;
+}
+
+/* Exclude performance-critical elements from transitions */
+:root .no-theme-transition,
+:root .no-theme-transition *,
+:root .no-theme-transition *::before,
+:root .no-theme-transition *::after {
+  transition: none !important;
+}
+
+/* Disable transitions on page load to prevent flash */
+.preload *,
+.preload *::before,
+.preload *::after {
+  transition: none !important;
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
-    font-family: 'Segoe UI Variable Text', 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-family: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1,
-  h2,
-  h3,
-  .font-brand {
-    font-family: 'Segoe UI Variable Display', 'Segoe UI', 'Noto Sans SC', sans-serif;
-    letter-spacing: -0.02em;
+  html {
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, .font-brand {
+    font-family: 'Inter', 'Segoe UI Variable Display', 'Segoe UI', 'Noto Sans SC', sans-serif;
+    letter-spacing: -0.025em;
     font-weight: 700;
   }
 
   .font-cn {
-    font-family: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', sans-serif;
+    font-family: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Inter', 'Segoe UI', sans-serif;
+  }
+
+  /* Enhanced focus visible styles */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Skip link for accessibility */
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: 0.5rem 1rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-radius: 0 0 0.5rem 0.5rem;
+    font-weight: 600;
+    transition: top var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+}
+
+@layer utilities {
+  /* Content-visibility for off-screen elements */
+  .content-auto {
+    content-visibility: auto;
+  }
+  .content-visible {
+    content-visibility: visible;
+  }
+
+  /* GPU acceleration helper */
+  .gpu-layer {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Gradient mask for fade edges */
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  }
+
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  }
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  :root,
+  :root *,
+  :root *::before,
+  :root *::after {
+    transition-duration: 0.01ms !important;
   }
 }

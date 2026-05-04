@@ -8,6 +8,8 @@ import {
   loadTatoebaExamplesDataset,
   type TatoebaExample,
 } from '@/lib/datasetLoader';
+import { loadDataProgressively, type ProgressCallback } from '@/lib/progressiveLoader';
+import type { CedictEnrichmentDataset, TatoebaExamplesDataset } from '@/lib/datasetLoader';
 
 // Unified Dictionary Entry - combines HSK + makemeahanzi + additional data
 export interface UnifiedEntry {
@@ -118,6 +120,7 @@ class UnifiedDictionaryService {
   private tatoebaExamples: Map<string, ExampleSentence[]> = new Map();
   private loaded = false;
   private loadPromise: Promise<void> | null = null;
+  private loadAbortController: AbortController | null = null;
 
   async initialize(): Promise<void> {
     if (this.loaded) return;
@@ -125,6 +128,27 @@ class UnifiedDictionaryService {
     
     this.loadPromise = this.loadAllData();
     return this.loadPromise;
+  }
+
+  /**
+   * Progressive initialization with real-time progress updates.
+   * 
+   * Reports download progress per file so the UI can show a loading screen
+   * with actual progress bars. Still returns when everything is ready.
+   */
+  async initializeWithProgress(onProgress: ProgressCallback): Promise<void> {
+    if (this.loaded) return;
+    if (this.loadPromise) return this.loadPromise;
+
+    this.loadAbortController = new AbortController();
+    this.loadPromise = this.loadAllDataProgressive(onProgress, this.loadAbortController.signal);
+    return this.loadPromise;
+  }
+
+  abortLoad(): void {
+    this.loadAbortController?.abort();
+    this.loadAbortController = null;
+    this.loadPromise = null;
   }
 
   private async loadAllData(): Promise<void> {
@@ -197,6 +221,75 @@ class UnifiedDictionaryService {
       if (!shouldLoadTatoebaExamples) {
         console.log('Skipped Tatoeba examples on low-bandwidth connection.');
       }
+    } catch (error) {
+      console.error('Failed to load dictionary:', error);
+      throw error;
+    }
+  }
+
+  private async loadAllDataProgressive(
+    onProgress: ProgressCallback,
+    signal: AbortSignal,
+  ): Promise<void> {
+    console.time('Dictionary Progressive Load');
+    
+    try {
+      const data = await loadDataProgressively(onProgress, signal);
+
+      this.hskData = [...(data.hskPart1 as HSKEntry[]), ...(data.hskPart2 as HSKEntry[])];
+      this.parseCharacterData(data.dictionaryText);
+      for (const graphicsPart of data.graphicsParts) {
+        this.parseGraphicsData(graphicsPart);
+      }
+
+      this.cedictEnrichment.clear();
+      const cedictDataset = data.cedictDataset as CedictEnrichmentDataset | null;
+      if (cedictDataset?.entries?.length) {
+        for (const entry of cedictDataset.entries) {
+          this.cedictEnrichment.set(entry.hanzi, entry);
+        }
+      }
+
+      this.tatoebaExamples.clear();
+      const tatoebaDataset = data.tatoebaDataset as TatoebaExamplesDataset | null;
+      if (tatoebaDataset?.words?.length) {
+        for (const wordEntry of tatoebaDataset.words) {
+          if (!wordEntry?.hanzi || !Array.isArray(wordEntry.examples) || wordEntry.examples.length === 0) {
+            continue;
+          }
+
+          const examples = wordEntry.examples
+            .filter((example: TatoebaExample): example is TatoebaExample => {
+              return Boolean(example && example.chinese && example.english && example.sourceId);
+            })
+            .map((example: TatoebaExample) => ({
+              chinese: example.chinese,
+              pinyin: example.pinyin,
+              english: example.english,
+              source: `Tatoeba #${example.sourceId}`,
+              sourceUrl: `https://tatoeba.org/en/sentences/show/${example.sourceId}`,
+              difficulty: example.difficulty,
+            }));
+
+          if (examples.length > 0) {
+            this.tatoebaExamples.set(wordEntry.hanzi, examples);
+          }
+        }
+      }
+      
+      // Build unified entries
+      this.buildUnifiedEntries();
+      
+      // Build search indexes
+      this.buildIndexes();
+      
+      this.loaded = true;
+      console.timeEnd('Dictionary Progressive Load');
+      console.log(`Loaded ${this.entries.size} unified entries`);
+      console.log(`Character data: ${this.charData.size} entries`);
+      console.log(`Graphics data: ${this.graphicsData.size} entries`);
+      console.log(`CEDICT enrichment: ${this.cedictEnrichment.size} entries`);
+      console.log(`Tatoeba example coverage: ${this.tatoebaExamples.size} entries`);
     } catch (error) {
       console.error('Failed to load dictionary:', error);
       throw error;

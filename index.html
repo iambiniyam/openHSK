@@ -2,22 +2,25 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta http-equiv="content-language" content="zh-CN,en" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
     <title>OpenHSK | Learn Chinese with HSK, Pinyin, and Stroke Practice</title>
     <meta
       name="description"
-      content="OpenHSK is a fast Chinese learning app for HSK vocabulary, pinyin, stroke order practice, quizzes, and daily goals."
+      content="OpenHSK is a fast, beautiful Chinese learning app for HSK vocabulary, pinyin, stroke order practice, quizzes, stories, and daily goals."
     />
     <meta
       name="keywords"
-      content="OpenHSK, HSK, Chinese learning, Hanzi, pinyin, stroke order, vocabulary, Mandarin"
+      content="OpenHSK, HSK, Chinese learning, Hanzi, pinyin, stroke order, vocabulary, Mandarin, 中文学习"
     />
     <meta name="author" content="iambiniyam" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#c2410c" />
+    <meta name="theme-color" content="#c2410c" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="OpenHSK" />
@@ -47,6 +50,18 @@
     <link rel="icon" href="/icon-192.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-192.svg" />
 
+    <!-- Preload critical data files for faster initial load -->
+    <link rel="preload" as="fetch" crossorigin="anonymous" href="/hsk3.0.part1.json">
+    <link rel="preload" as="fetch" crossorigin="anonymous" href="/dictionary.txt">
+
+    <!-- Font preloads for consistent CJK rendering -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -55,11 +70,17 @@
         "applicationCategory": "EducationalApplication",
         "operatingSystem": "Any",
         "description": "A Chinese learning web app for HSK vocabulary, stroke order, pinyin, and quiz-based practice.",
-        "url": "https://openhsk.pages.dev"
+        "url": "https://openhsk.pages.dev",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
       }
     </script>
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

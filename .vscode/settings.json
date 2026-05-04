@@ -1,0 +1,14 @@
+{
+  "terminal.integrated.profiles.windows": {
+    "PowerShell (fnm)": {
+      "source": "PowerShell",
+      "args": [
+        "-NoLogo",
+        "-NoExit",
+        "-Command",
+        "$env:PATH = \"$env:USERPROFILE\\.fnm;$env:PATH\"; fnm env --shell powershell | Out-String | Invoke-Expression; fnm use default"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "PowerShell (fnm)"
+}

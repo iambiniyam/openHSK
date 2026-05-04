@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -22,56 +22,72 @@ interface QuizModeProps {
   onExit?: () => void;
 }
 
+function fisherYates<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
   const [quizVersion, setQuizVersion] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [score, setScore] = useState(0);
+  const [scoreFlash, setScoreFlash] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
+  const scoreRef = useRef(0);
 
   const generateQuestions = useCallback((entries: UnifiedEntry[], version: number): Question[] => {
     void version;
-    const shuffled = [...entries].sort(() => Math.random() - 0.5).slice(0, 10);
-    
-    return shuffled.map(entry => {
+    if (entries.length === 0) return [];
+
+    const shuffledAll = fisherYates(entries);
+    const questionEntries = shuffledAll.slice(0, Math.min(10, entries.length));
+
+    const getOptionValue = (e: UnifiedEntry, questionType: QuestionType): string | undefined => {
+      switch (questionType) {
+        case 'character-to-meaning':
+          return e.definitions[0];
+        case 'meaning-to-character':
+          return e.hanzi;
+        case 'pinyin-to-character':
+          return e.hanzi;
+        case 'character-to-pinyin':
+          return e.pinyin;
+        default:
+          return undefined;
+      }
+    };
+
+    let poolIndex = questionEntries.length;
+
+    return questionEntries.map(entry => {
       const types: QuestionType[] = ['character-to-meaning', 'meaning-to-character', 'pinyin-to-character', 'character-to-pinyin'];
       const type = types[Math.floor(Math.random() * types.length)];
-      
-      const getOptionValue = (e: UnifiedEntry, questionType: QuestionType): string | undefined => {
-        switch (questionType) {
-          case 'character-to-meaning':
-            return e.definitions[0];
-          case 'meaning-to-character':
-            return e.hanzi;
-          case 'pinyin-to-character':
-            return e.hanzi;
-          case 'character-to-pinyin':
-            return e.pinyin;
-          default:
-            return undefined;
-        }
-      };
 
-      // Generate wrong options from other entries
-      const otherEntries = entries.filter(e => e.id !== entry.id);
-      const usedValues = new Set<string>();
+      const correctAnswer = getOptionValue(entry, type) || entry.hanzi;
+      const usedValues = new Set<string>([correctAnswer]);
       const wrongOptions: string[] = [];
-      
-      const shuffledOthers = [...otherEntries].sort(() => Math.random() - 0.5);
-      for (const otherEntry of shuffledOthers) {
-        if (wrongOptions.length >= 3) break;
-        const value = getOptionValue(otherEntry, type);
+
+      let attempts = 0;
+      while (wrongOptions.length < 3 && attempts < shuffledAll.length * 2) {
+        const candidate = shuffledAll[poolIndex % shuffledAll.length];
+        poolIndex++;
+        attempts++;
+        if (candidate.id === entry.id) continue;
+        const value = getOptionValue(candidate, type);
         if (value && !usedValues.has(value)) {
           usedValues.add(value);
           wrongOptions.push(value);
         }
       }
 
-      const correctAnswer = getOptionValue(entry, type) || entry.hanzi;
-      usedValues.add(correctAnswer);
-
-      const options = [correctAnswer, ...wrongOptions].sort(() => Math.random() - 0.5);
+      const options = fisherYates([correctAnswer, ...wrongOptions]);
 
       return {
         type,
@@ -91,18 +107,27 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
 
   const currentQuestion = questions[currentIndex];
 
-  const handleAnswer = (answer: string) => {
-    if (showAnswer) return;
-    
+  const handleAnswer = useCallback((answer: string) => {
+    if (showAnswer || !currentQuestion) return;
+
     setSelectedAnswer(answer);
     setShowAnswer(true);
-    
-    if (answer === currentQuestion.correctAnswer) {
-      setScore(prev => prev + 1);
-    }
-  };
 
-  const nextQuestion = () => {
+    if (answer === currentQuestion.correctAnswer) {
+      setScore(prev => {
+        const next = prev + 1;
+        scoreRef.current = next;
+        return next;
+      });
+      setScoreFlash(true);
+      setTimeout(() => setScoreFlash(false), 400);
+    } else {
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
+    }
+  }, [showAnswer, currentQuestion]);
+
+  const nextQuestion = useCallback(() => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setSelectedAnswer(null);
@@ -110,18 +135,53 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
     } else {
       setQuizComplete(true);
       if (onComplete) {
-        onComplete(score, questions.length);
+        onComplete(scoreRef.current, questions.length);
       }
     }
-  };
+  }, [currentIndex, questions.length, onComplete]);
 
-  const playAudio = () => {
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (quizComplete) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onExit?.();
+        return;
+      }
+
+      if (!currentQuestion) return;
+
+      if (!showAnswer) {
+        if (e.key >= '1' && e.key <= '4') {
+          const index = parseInt(e.key) - 1;
+          if (index < currentQuestion.options.length) {
+            handleAnswer(currentQuestion.options[index]);
+          }
+        }
+      } else {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          nextQuestion();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [quizComplete, currentQuestion, showAnswer, onExit, handleAnswer, nextQuestion]);
+
+  const playAudio = useCallback(() => {
     if (currentQuestion) {
       ttsService.speak(currentQuestion.entry.hanzi);
     }
-  };
+  }, [currentQuestion]);
 
-  const getQuestionDisplay = () => {
+  // Memoized question display
+  const questionDisplay = useMemo(() => {
     if (!currentQuestion) return null;
 
     switch (currentQuestion.type) {
@@ -157,33 +217,66 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
       default:
         return null;
     }
-  };
+  }, [currentQuestion]);
 
-  const getOptionDisplay = (option: string) => {
-    if (!currentQuestion) return option;
-
-    // Check if option is a Chinese character
+  // Memoized option display helper
+  const getOptionDisplay = useCallback((option: string) => {
     const isChinese = /[\u4e00-\u9fa5]/.test(option);
-    
     if (isChinese) {
       return <span className="text-2xl break-words">{option}</span>;
     }
     return <span className="break-words whitespace-normal text-center leading-snug">{option}</span>;
-  };
+  }, []);
+
+  const isPerfectScore = quizComplete && score === questions.length && questions.length > 0;
+
+  const confettiParticles = useMemo(() =>
+    Array.from({ length: 40 }).map(() => ({
+      left: Math.random() * 100,
+      animDuration: 1.5 + Math.random() * 2,
+      delay: Math.random() * 1.5,
+      color: ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#06b6d4'][Math.floor(Math.random() * 6)],
+    })),
+    [quizVersion]
+  );
 
   if (quizComplete) {
     const finalScore = score;
     const percentage = Math.round((finalScore / questions.length) * 100);
-    
+
     return (
-      <Card className="w-full max-w-lg mx-auto">
+      <Card className="w-full max-w-lg mx-auto relative overflow-hidden">
+        {isPerfectScore && (
+          <>
+            <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+              {confettiParticles.map((p, i) => (
+                <div
+                  key={i}
+                  className="absolute top-0 w-2 h-2 rounded-sm"
+                  style={{
+                    left: `${p.left}%`,
+                    backgroundColor: p.color,
+                    animation: `confetti-fall ${p.animDuration}s ${p.delay}s linear forwards`,
+                    opacity: 0,
+                  }}
+                />
+              ))}
+            </div>
+            <style>{`
+              @keyframes confetti-fall {
+                0% { transform: translateY(-10%) rotate(0deg); opacity: 1; }
+                100% { transform: translateY(420px) rotate(720deg); opacity: 0; }
+              }
+            `}</style>
+          </>
+        )}
         <CardContent className="p-8 text-center space-y-6">
           <div className="flex justify-center">
             <div className="p-4 bg-primary/10 rounded-full">
               <Trophy className="w-12 h-12 text-primary" />
             </div>
           </div>
-          
+
           <div>
             <h2 className="text-2xl font-bold mb-2">Quiz Complete!</h2>
             <p className="text-muted-foreground">
@@ -200,6 +293,7 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
               setQuizVersion((prev) => prev + 1);
               setCurrentIndex(0);
               setScore(0);
+              scoreRef.current = 0;
               setSelectedAnswer(null);
               setShowAnswer(false);
               setQuizComplete(false);
@@ -230,11 +324,23 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
       {/* Progress */}
       <div className="flex items-center justify-between text-sm">
         <span>Question {currentIndex + 1} of {questions.length}</span>
-        <span>Score: {score}</span>
+        <span className={`transition-all duration-300 ${scoreFlash ? 'text-green-600 dark:text-green-400 scale-125 font-bold' : ''}`}>
+          Score: {score}
+        </span>
       </div>
-      <Progress value={(currentIndex / questions.length) * 100} className="h-2" />
+      <Progress value={((currentIndex + 1) / questions.length) * 100} className="h-2" />
 
-      <Card className="w-full max-w-lg mx-auto">
+      <Card className={`w-full max-w-lg mx-auto transition-transform ${isShaking ? 'animate-shake' : ''}`}>
+        <style>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+          }
+          .animate-shake {
+            animation: shake 0.5s ease-in-out;
+          }
+        `}</style>
         <CardHeader className="flex flex-row items-center justify-between">
           <Badge variant="secondary">
             {currentQuestion.type.replace(/-/g, ' ')}
@@ -243,10 +349,10 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
             <Volume2 className="w-5 h-5" />
           </Button>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {/* Question */}
-          {getQuestionDisplay()}
+          {questionDisplay}
 
           {/* Options */}
           <div className="grid grid-cols-2 gap-3">
@@ -279,8 +385,8 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
           {/* Answer feedback */}
           {showAnswer && (
             <div className={`p-4 rounded-lg text-center ${
-              selectedAnswer === currentQuestion.correctAnswer 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+              selectedAnswer === currentQuestion.correctAnswer
+                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                 : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
             }`}>
               {selectedAnswer === currentQuestion.correctAnswer ? (
