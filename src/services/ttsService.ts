@@ -3,8 +3,9 @@ import {
   loadAzureConfig,
   synthesizeAzure,
 } from './enhancedTtsService';
+import { speakWebTts, isWebTtsSupported } from './webTtsService';
 
-export type TtsProvider = 'browser' | 'azure';
+export type TtsProvider = 'browser' | 'azure' | 'web';
 
 export interface TtsVoiceInfo {
   name: string;
@@ -62,7 +63,7 @@ class TTSService {
     // Load saved provider preference
     try {
       const savedProvider = localStorage.getItem('openhsk.tts-provider.v1');
-      if (savedProvider === 'azure' || savedProvider === 'browser') {
+      if (savedProvider === 'azure' || savedProvider === 'browser' || savedProvider === 'web') {
         this.provider = savedProvider;
       }
     } catch {
@@ -210,6 +211,10 @@ class TTSService {
     } catch {
       // ignore
     }
+  }
+
+  isWebTtsSupported(): boolean {
+    return isWebTtsSupported();
   }
 
   getAzureConfig(): AzureTtsConfig | null {
@@ -403,6 +408,8 @@ class TTSService {
     const doSpeak = async () => {
       if (this.provider === 'azure' && this.azureConfig) {
         await this.speakAzure(text);
+      } else if (this.provider === 'web') {
+        await speakWebTts(text, 'zh-CN');
       } else {
         if (!this.synth) {
           throw new Error('Speech synthesis not supported');
@@ -461,6 +468,8 @@ class TTSService {
 
         if (this.provider === 'azure' && this.azureConfig) {
           await this.speakAzure(trimmed, signal);
+        } else if (this.provider === 'web') {
+          await speakWebTts(trimmed, 'zh-CN');
         } else {
           await this.speakUtterance(trimmed, signal);
         }

@@ -47,7 +47,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 import { unifiedDictionary, type UnifiedEntry } from '@/services/unifiedDictionaryService';
 import { hskDataService } from '@/services/hskDataService';
-import { ttsService } from '@/services/ttsService';
+import { ttsService, type TtsProvider } from '@/services/ttsService';
 import { scheduleRuntimeWarmup } from '@/lib/runtimeWarmup';
 import { fetchWithCacheFallback } from '@/lib/offlineFetch';
 import type { UserStats } from '@/types/hsk';
@@ -290,6 +290,7 @@ function App() {
   
   // Settings
   const [ttsRate, setTtsRate] = useState(initialSession?.ttsRate || 1);
+  const [ttsProvider, setTtsProvider] = useState<TtsProvider>(() => ttsService.getProvider());
   const [showPomodoro, setShowPomodoro] = useState(false);
   const [exportData, setExportData] = useState('');
 
@@ -1791,57 +1792,94 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Voice Quality Indicator */}
+                  {/* TTS Provider */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Voice Quality</Label>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={voiceQuality.score >= 80 ? 'default' : voiceQuality.score >= 50 ? 'secondary' : 'destructive'}
-                        className="text-xs"
-                      >
-                        {voiceQuality.label}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {voiceQuality.description}
-                      </span>
+                    <Label className="text-sm font-medium">TTS Engine</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { value: 'browser' as const, label: 'Browser', desc: 'Use system voices' },
+                        { value: 'web' as const, label: 'Web TTS', desc: 'Free, no signup' },
+                        { value: 'azure' as const, label: 'Azure', desc: 'Neural quality' },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => {
+                            ttsService.setProvider(opt.value);
+                            setTtsProvider(opt.value);
+                          }}
+                          className={`flex flex-col items-center gap-1 rounded-lg border p-2.5 text-center transition-all ${
+                            ttsProvider === opt.value
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border/50 hover:border-primary/30 hover:bg-muted/50'
+                          }`}
+                        >
+                          <span className="text-xs font-semibold">{opt.label}</span>
+                          <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
+                        </button>
+                      ))}
                     </div>
-                  </div>
-
-                  {/* Voice Picker */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Chinese Voice</Label>
-                    <Select
-                      value={selectedVoiceName}
-                      onValueChange={(name) => {
-                        ttsService.setVoiceByName(name);
-                        setSelectedVoiceName(name);
-                        setVoiceQuality(ttsService.getVoiceQualityLabel());
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a voice..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableVoices.length === 0 ? (
-                          <SelectItem value="none" disabled>
-                            No voices available — try reloading the page
-                          </SelectItem>
-                        ) : (
-                          availableVoices.map((voice) => (
-                            <SelectItem key={voice.name} value={voice.name}>
-                              {voice.name} ({voice.lang})
-                              {voice.default && ' • Default'}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {availableVoices.length === 0 && (
-                      <p className="text-xs text-amber-600">
-                        No Chinese voices detected. On iOS, go to Settings → Accessibility → Spoken Content → Voices → Chinese to download higher-quality voices.
+                    {ttsProvider === 'web' && (
+                      <p className="text-xs text-muted-foreground">
+                        Uses Google Translate TTS. Free, no signup, works in most browsers. Quality varies.
                       </p>
                     )}
                   </div>
+
+                  {ttsProvider === 'browser' && (
+                    <>
+                      {/* Voice Quality Indicator */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Voice Quality</Label>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={voiceQuality.score >= 80 ? 'default' : voiceQuality.score >= 50 ? 'secondary' : 'destructive'}
+                            className="text-xs"
+                          >
+                            {voiceQuality.label}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {voiceQuality.description}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Voice Picker */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Chinese Voice</Label>
+                        <Select
+                          value={selectedVoiceName}
+                          onValueChange={(name) => {
+                            ttsService.setVoiceByName(name);
+                            setSelectedVoiceName(name);
+                            setVoiceQuality(ttsService.getVoiceQualityLabel());
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a voice..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableVoices.length === 0 ? (
+                              <SelectItem value="none" disabled>
+                                No voices available — try reloading the page
+                              </SelectItem>
+                            ) : (
+                              availableVoices.map((voice) => (
+                                <SelectItem key={voice.name} value={voice.name}>
+                                  {voice.name} ({voice.lang})
+                                  {voice.default && ' • Default'}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {availableVoices.length === 0 && (
+                          <p className="text-xs text-amber-600">
+                            No Chinese voices detected. On iOS, go to Settings → Accessibility → Spoken Content → Voices → Chinese to download higher-quality voices.
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
 
                   {/* Test Voice */}
                   <Button
