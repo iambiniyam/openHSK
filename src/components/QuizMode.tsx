@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Volume2, CheckCircle2, XCircle, ArrowRight, Trophy } from 'lucide-react';
+import { Volume2, CheckCircle2, XCircle, ArrowRight, Trophy, Headphones } from 'lucide-react';
 import { ttsService } from '@/services/ttsService';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
 
@@ -40,6 +40,9 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
   const [scoreFlash, setScoreFlash] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [autoPlayAudio, setAutoPlayAudio] = useState(() => {
+    try { return localStorage.getItem('openhsk.quiz-autoplay.v1') === 'true'; } catch { return false; }
+  });
   const scoreRef = useRef(0);
 
   const generateQuestions = useCallback((entries: UnifiedEntry[], version: number): Question[] => {
@@ -139,6 +142,16 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
       }
     }
   }, [currentIndex, questions.length, onComplete]);
+
+  // Auto-play audio when question changes
+  useEffect(() => {
+    if (autoPlayAudio && currentQuestion && !showAnswer) {
+      const timer = setTimeout(() => {
+        ttsService.speak(currentQuestion.entry.hanzi);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [currentQuestion, autoPlayAudio, showAnswer, currentIndex]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -345,9 +358,26 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
           <Badge variant="secondary">
             {currentQuestion.type.replace(/-/g, ' ')}
           </Badge>
-          <Button variant="ghost" size="icon" onClick={playAudio}>
-            <Volume2 className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant={autoPlayAudio ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              onClick={() => {
+                setAutoPlayAudio(prev => {
+                  const next = !prev;
+                  try { localStorage.setItem('openhsk.quiz-autoplay.v1', String(next)); } catch { /* ignore */ }
+                  return next;
+                });
+              }}
+            >
+              <Headphones className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Auto</span>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={playAudio}>
+              <Volume2 className="w-5 h-5" />
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-6">
@@ -366,12 +396,15 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
                 <Button
                   key={index}
                   variant={showCorrect ? 'default' : showWrong ? 'destructive' : 'outline'}
-                  className={`h-auto py-4 px-4 text-left justify-center whitespace-normal break-words ${
+                  className={`h-auto py-4 px-4 text-left justify-center whitespace-normal break-words relative ${
                     isSelected ? 'ring-2 ring-primary' : ''
                   }`}
                   onClick={() => handleAnswer(option)}
                   disabled={showAnswer}
                 >
+                  <span className="absolute top-1.5 left-2 text-[10px] font-mono text-muted-foreground/60 select-none">
+                    {index + 1}
+                  </span>
                   <div className="flex items-center gap-2">
                     {showCorrect && <CheckCircle2 className="w-4 h-4" />}
                     {showWrong && <XCircle className="w-4 h-4" />}

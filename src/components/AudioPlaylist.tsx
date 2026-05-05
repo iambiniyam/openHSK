@@ -213,14 +213,15 @@ export const AudioPlaylist: React.FC = () => {
         <CardContent className="space-y-6">
           {/* Current Word Display */}
           {currentWord && (
-            <div className="text-center space-y-2 p-6 bg-muted rounded-lg">
-              <div className="text-4xl font-bold">{currentWord.source.hanzi}</div>
-              <div className="text-xl text-muted-foreground">{currentWord.source.pinyin}</div>
+            <div className="text-center space-y-3 p-8 bg-gradient-to-br from-primary/5 via-background to-primary/5 rounded-2xl border border-primary/10">
+              <div className="text-5xl sm:text-6xl font-bold tracking-tight">{currentWord.source.hanzi}</div>
+              <div className="text-xl sm:text-2xl text-primary font-medium">{currentWord.source.pinyin}</div>
               {settings.includeEnglish && currentWord.core.english_definitions.length > 0 && (
-                <div className="text-lg">{currentWord.core.english_definitions[0]}</div>
+                <div className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto">{currentWord.core.english_definitions[0]}</div>
               )}
-              <div className="text-sm text-muted-foreground">
-                Level {currentWord.source.level} • {currentIndex + 1} of {playlist.length}
+              <div className="inline-flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                HSK {currentWord.source.level} • {currentIndex + 1} of {playlist.length}
               </div>
             </div>
           )}

@@ -34,6 +34,9 @@ import {
   AlertTriangle,
   History,
   Trash2,
+  Headphones,
+  Layers,
+  Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +64,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { TopProgressBar } from '@/components/TopProgressBar';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import type { ProgressUpdate } from '@/lib/progressiveLoader';
 
 import './App.css';
@@ -314,6 +318,15 @@ function App() {
   // Init error state
   const [initError, setInitError] = useState(false);
 
+  // Auto-play TTS in study mode
+  const [studyAutoPlay, setStudyAutoPlay] = useState(() => {
+    try { return localStorage.getItem('openhsk.study-autoplay.v1') === 'true'; } catch { return false; }
+  });
+
+  // Study session dialog
+  const [showStudyDialog, setShowStudyDialog] = useState(false);
+  const [studySessionSize, setStudySessionSize] = useState(20);
+
   // Search history
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try {
@@ -479,13 +492,37 @@ function App() {
   // Hash-based deep linking — read hash on mount
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
-    if (hash) {
-      const view = hash.split('/')[0] as ViewMode;
-      if (isViewMode(view)) {
-        setCurrentView(view);
+    if (!hash) return;
+    const [view, ...params] = hash.split('/');
+    if (isViewMode(view)) {
+      setCurrentView(view);
+      // Restore detail view state
+      if (view === 'detail' && params[0] && dictionaryReady) {
+        const entry = unifiedDictionary.getAllEntries().find(e => e.id === params[0] || e.hanzi === decodeURIComponent(params[0]));
+        if (entry) {
+          setSelectedEntry(entry);
+          setDetailSequence([entry]);
+          setDetailReturnView('browse');
+        }
+      }
+      // Restore story reader state
+      if (view === 'stories' && params[0] === 'reader' && params[1] && storyDataset) {
+        const idx = parseInt(params[1], 10);
+        if (!isNaN(idx) && storyDataset.stories[idx]) {
+          setCurrentStoryIndex(idx);
+          setStoryView('reader');
+        }
+      }
+      // Restore book reader state
+      if (view === 'books' && params[0] === 'reader' && params[1] && bookDataset) {
+        const idx = parseInt(params[1], 10);
+        if (!isNaN(idx) && bookDataset.books[idx]) {
+          setCurrentBookIndex(idx);
+          setBookView('reader');
+        }
       }
     }
-  }, []);
+  }, [dictionaryReady, storyDataset, bookDataset]);
 
   // Listen for browser back/forward hash changes
   useEffect(() => {
@@ -715,8 +752,8 @@ function App() {
     return isFav;
   }, []);
 
-  const startStudySession = useCallback(() => {
-    const recommended = hskDataService.getRecommendedEntries(20)
+  const startStudySession = useCallback((size = 20) => {
+    const recommended = hskDataService.getRecommendedEntries(size)
       .map((hsk) => unifiedDictionary.getEntry(hsk.entry_id))
       .filter((entry): entry is UnifiedEntry => Boolean(entry));
     setStudyEntries(recommended);
@@ -765,6 +802,17 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentView, showQuiz, showAnswer, handleStudyResult]);
+
+  // Auto-play TTS when answer is revealed in study mode
+  useEffect(() => {
+    if (currentView === 'study' && studyAutoPlay && showAnswer && studyEntries[currentStudyIndex]) {
+      const entry = studyEntries[currentStudyIndex];
+      const timer = setTimeout(() => {
+        ttsService.speak(entry.hanzi);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [currentView, showAnswer, studyAutoPlay, currentStudyIndex, studyEntries]);
 
   const handleRetryInit = useCallback(() => {
     setInitError(false);
@@ -847,7 +895,7 @@ function App() {
                         variant="outline"
                         onClick={() => {
                           dismissWelcomeBanner();
-                          startStudySession();
+                          setShowStudyDialog(true);
                         }}
                       >
                         <Brain className="w-3.5 h-3.5 mr-1.5" />
@@ -894,6 +942,7 @@ function App() {
             value: dueCount,
             toneClass: 'bg-green-100 dark:bg-green-900',
             iconClass: 'text-green-600 dark:text-green-400',
+            onClick: () => setShowStudyDialog(true),
           },
           {
             icon: Heart,
@@ -909,7 +958,10 @@ function App() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card
+              className={`hover:shadow-lg transition-all duration-200 ${stat.onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+              onClick={stat.onClick}
+            >
               <CardContent className="p-4 flex items-center gap-3">
                 <div className={`p-3 rounded-xl ${stat.toneClass}`}>
                   <stat.icon className={`w-6 h-6 ${stat.iconClass}`} />
@@ -947,7 +999,7 @@ function App() {
               tooltip: 'Review due words or learn new ones with spaced repetition (SRS)',
               toneClass: 'bg-primary/10',
               iconClass: 'text-primary',
-              onClick: startStudySession
+              onClick: () => setShowStudyDialog(true)
             },
             { 
               icon: Gamepad2, 
@@ -1465,10 +1517,27 @@ function App() {
               <div className="text-2xl text-muted-foreground">{currentEntry.pinyin}</div>
             </div>
             
-            <Button variant="outline" size="sm" onClick={() => ttsService.speak(currentEntry.hanzi)}>
-              <Volume2 className="w-4 h-4 mr-2" />
-              Listen
-            </Button>
+            <div className="flex items-center justify-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => ttsService.speak(currentEntry.hanzi)}>
+                <Volume2 className="w-4 h-4 mr-2" />
+                Listen
+              </Button>
+              <Button
+                variant={studyAutoPlay ? 'secondary' : 'ghost'}
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={() => {
+                  setStudyAutoPlay(prev => {
+                    const next = !prev;
+                    try { localStorage.setItem('openhsk.study-autoplay.v1', String(next)); } catch { /* ignore */ }
+                    return next;
+                  });
+                }}
+              >
+                <Headphones className="w-3.5 h-3.5" />
+                Auto
+              </Button>
+            </div>
 
             <AnimatePresence>
               {showAnswer && (
@@ -1493,6 +1562,27 @@ function App() {
                       <div className="text-lg break-words">{currentEntry.examples[0].chinese}</div>
                       <div className="text-sm text-muted-foreground break-words">{currentEntry.examples[0].pinyin}</div>
                       <div className="text-sm text-muted-foreground break-words">{currentEntry.examples[0].english}</div>
+                    </div>
+                  )}
+
+                  {/* Character Breakdown */}
+                  {currentEntry.characterBreakdown && currentEntry.characterBreakdown.length > 1 && (
+                    <div className="bg-primary/[0.03] border border-primary/10 p-4 rounded-lg">
+                      <div className="font-medium text-sm mb-2 flex items-center gap-1.5 text-primary/80">
+                        <Layers className="w-3.5 h-3.5" />
+                        Character Breakdown
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {currentEntry.characterBreakdown.map((char) => (
+                          <div key={char.char} className="flex flex-col items-center gap-1 px-3 py-2 bg-background rounded-lg border border-border/50 min-w-[60px]">
+                            <span className="text-xl font-bold">{char.char}</span>
+                            <span className="text-xs text-muted-foreground">{char.pinyin}</span>
+                            {char.definition && (
+                              <span className="text-[10px] text-muted-foreground text-center leading-tight max-w-[80px]">{char.definition}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -1569,15 +1659,35 @@ function App() {
                 const progressKey = String(level);
                 const progress = userStats?.levelProgress[progressKey];
                 const studied = progress?.studied || 0;
-                const percentage = count > 0 ? (studied / count) * 100 : 0;
+                const percentage = count > 0 ? Math.round((studied / count) * 100) : 0;
+                const levelColors: Record<number, string> = {
+                  1: 'bg-green-500',
+                  2: 'bg-emerald-500',
+                  3: 'bg-blue-500',
+                  4: 'bg-purple-500',
+                  5: 'bg-orange-500',
+                  6: 'bg-red-500',
+                };
+                const levelNum = level as number;
                 
                 return (
-                  <div key={level} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4">
-                    <div className="sm:w-20 font-medium text-sm">{label}</div>
+                  <div key={level} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 group">
+                    <div className="sm:w-20 font-medium text-sm flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${levelColors[levelNum] || 'bg-gray-400'}`} />
+                      {label}
+                    </div>
                     <div className="flex items-center gap-3 flex-1">
-                      <Progress value={percentage} className="flex-1 h-3" />
-                      <div className="text-right text-sm text-muted-foreground tabular-nums shrink-0">
-                        {studied} / {count}
+                      <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          className={`h-full rounded-full ${levelColors[levelNum] || 'bg-gray-400'}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                        />
+                      </div>
+                      <div className="text-right text-sm tabular-nums shrink-0 min-w-[4rem]">
+                        <span className="font-medium">{percentage}%</span>
+                        <span className="text-muted-foreground text-xs ml-1">({studied}/{count})</span>
                       </div>
                     </div>
                   </div>
@@ -1795,6 +1905,7 @@ function App() {
     <div className="min-h-screen bg-background brand-atmosphere">
       <OfflineBanner />
       <KeyboardShortcutsHelp />
+      <PwaInstallPrompt />
       {/* Header */}
       <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -2135,6 +2246,81 @@ function App() {
           </AnimatePresence>
         </main>
       </ErrorBoundary>
+
+      {/* Study Session Dialog */}
+      <Dialog open={showStudyDialog} onOpenChange={setShowStudyDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="w-5 h-5" />
+              Start Study Session
+            </DialogTitle>
+            <DialogDescription>
+              {dueCount > 0
+                ? `${dueCount} cards due for review`
+                : "You're all caught up! Ready to learn new words?"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Session Size</Label>
+              <div className="flex gap-2">
+                {[10, 20, 50].map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setStudySessionSize(size)}
+                    className={`flex-1 rounded-lg border p-2.5 text-center text-sm font-medium transition-all ${
+                      studySessionSize === size
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border/50 hover:border-primary/30 hover:bg-muted/50'
+                    }`}
+                  >
+                    {size} cards
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Auto-Play Audio</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={studyAutoPlay ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1 gap-1"
+                  onClick={() => {
+                    setStudyAutoPlay(true);
+                    try { localStorage.setItem('openhsk.study-autoplay.v1', 'true'); } catch { /* ignore */ }
+                  }}
+                >
+                  <Headphones className="w-3.5 h-3.5" />
+                  On
+                </Button>
+                <Button
+                  variant={!studyAutoPlay ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1 gap-1"
+                  onClick={() => {
+                    setStudyAutoPlay(false);
+                    try { localStorage.setItem('openhsk.study-autoplay.v1', 'false'); } catch { /* ignore */ }
+                  }}
+                >
+                  Off
+                </Button>
+              </div>
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => {
+                setShowStudyDialog(false);
+                startStudySession(studySessionSize);
+              }}
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Start Session
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>

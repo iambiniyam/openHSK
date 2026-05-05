@@ -175,7 +175,27 @@ export const WordDetail = ({
                   >
                     <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
                   </Button>
-                  <Button variant="outline" size="icon">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={async () => {
+                      const shareData = {
+                        title: `OpenHSK — ${entry.hanzi}`,
+                        text: `${entry.hanzi} (${entry.pinyin}) — ${entry.definitions.join(', ')}`,
+                        url: window.location.href,
+                      };
+                      try {
+                        if (navigator.share) {
+                          await navigator.share(shareData);
+                        } else if (navigator.clipboard) {
+                          await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+                          alert('Copied to clipboard!');
+                        }
+                      } catch {
+                        // User cancelled or share failed
+                      }
+                    }}
+                  >
                     <Share2 className="w-5 h-5" />
                   </Button>
                 </div>
