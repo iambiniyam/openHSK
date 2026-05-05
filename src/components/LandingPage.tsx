@@ -212,6 +212,23 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
           </Button>
         </motion.div>
       </motion.section>
+
+      {/* ── Developer Link ── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        className="text-center pb-4"
+      >
+        <a
+          href="https://thebini.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
+          Made by Bini — Questions or suggestions? Contact the developer →
+        </a>
+      </motion.div>
     </div>
   );
 };
