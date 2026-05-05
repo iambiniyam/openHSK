@@ -1,5 +1,5 @@
-import { useRef, useEffect } from 'react';
-import { motion, useInView, animate } from 'framer-motion';
+import { useRef, useEffect } from "react";
+import { motion, useInView, animate } from "framer-motion";
 import {
   ArrowRight,
   BookOpen,
@@ -13,9 +13,9 @@ import {
   BarChart3,
   Globe,
   Sparkles,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface LandingPageProps {
   totalWords: number;
@@ -33,23 +33,23 @@ const stagger = {
 };
 
 const stats = [
-  { value: '9', suffix: '', label: 'HSK Levels' },
-  { value: '5K+', suffix: '', label: 'Words' },
-  { value: 'Offline', suffix: '', label: 'PWA' },
-  { value: 'Free', suffix: '', label: 'Open Source' },
+  { value: "9", suffix: "", label: "HSK Levels" },
+  { value: "5K+", suffix: "", label: "Words" },
+  { value: "Offline", suffix: "", label: "PWA" },
+  { value: "Free", suffix: "", label: "Open Source" },
 ];
 
 const features = [
-  { icon: BookOpen, label: 'Dictionary' },
-  { icon: Brain, label: 'SRS Study' },
-  { icon: Zap, label: 'Quizzes' },
-  { icon: PenLine, label: 'Writing' },
-  { icon: Headphones, label: 'Audio' },
-  { icon: ScrollText, label: 'Stories' },
-  { icon: Library, label: 'Books' },
-  { icon: GitBranch, label: 'Grammar' },
-  { icon: BarChart3, label: 'Progress' },
-  { icon: Globe, label: 'Offline' },
+  { icon: BookOpen, label: "Dictionary" },
+  { icon: Brain, label: "SRS Study" },
+  { icon: Zap, label: "Quizzes" },
+  { icon: PenLine, label: "Writing" },
+  { icon: Headphones, label: "Audio" },
+  { icon: ScrollText, label: "Stories" },
+  { icon: Library, label: "Books" },
+  { icon: GitBranch, label: "Grammar" },
+  { icon: BarChart3, label: "Progress" },
+  { icon: Globe, label: "Offline" },
 ];
 
 function AnimatedCounter({ value }: { value: string }) {
@@ -64,7 +64,7 @@ function AnimatedCounter({ value }: { value: string }) {
     if (!isInView || !ref.current || !isPureNumber) return;
     const controls = animate(0, numeric, {
       duration: 1.2,
-      ease: 'circOut',
+      ease: "circOut",
       onUpdate: (v) => {
         if (ref.current) ref.current.textContent = Math.round(v).toString();
       },
@@ -75,7 +75,11 @@ function AnimatedCounter({ value }: { value: string }) {
   return <span ref={ref}>{value}</span>;
 }
 
-export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }: LandingPageProps) => {
+export const LandingPage = ({
+  totalWords,
+  onStartLearning,
+  onBrowseDictionary,
+}: LandingPageProps) => {
   return (
     <div className="space-y-12 sm:space-y-16 pb-8">
       {/* ── Hero ── */}
@@ -93,7 +97,10 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
 
         <div className="relative max-w-3xl mx-auto text-center space-y-6">
           <motion.div variants={fadeUp}>
-            <Badge variant="secondary" className="gap-1.5 px-3 py-1 text-[11px] font-medium rounded-full">
+            <Badge
+              variant="secondary"
+              className="gap-1.5 px-3 py-1 text-[11px] font-medium rounded-full"
+            >
               <Sparkles className="h-3 w-3" />
               Free &amp; Open Source
             </Badge>
@@ -107,11 +114,15 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
               </span>
             </h1>
             <p className="max-w-md mx-auto text-base text-muted-foreground text-balance">
-              A modern, open platform for HSK vocabulary, writing, reading, and daily review.
+              A modern, open platform for HSK vocabulary, writing, reading, and
+              daily review.
             </p>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-3">
+          <motion.div
+            variants={fadeUp}
+            className="flex flex-wrap items-center justify-center gap-3"
+          >
             <Button
               size="lg"
               className="h-11 px-6 text-sm rounded-xl shadow-lg shadow-primary/20"
@@ -126,7 +137,10 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
               className="h-11 px-6 text-sm rounded-xl"
               onClick={onBrowseDictionary}
             >
-              Browse {totalWords > 0 ? `${totalWords.toLocaleString()} words` : 'Dictionary'}
+              Browse{" "}
+              {totalWords > 0
+                ? `${totalWords.toLocaleString()} words`
+                : "Dictionary"}
             </Button>
           </motion.div>
 
@@ -157,7 +171,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
       <motion.section
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: '-60px' }}
+        viewport={{ once: true, margin: "-60px" }}
         variants={stagger}
         className="max-w-3xl mx-auto"
       >
@@ -195,18 +209,25 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
       <motion.section
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: '-60px' }}
+        viewport={{ once: true, margin: "-60px" }}
         variants={stagger}
         className="text-center space-y-4 px-4"
       >
-        <motion.h2 variants={fadeUp} className="text-xl sm:text-2xl font-bold tracking-tight">
+        <motion.h2
+          variants={fadeUp}
+          className="text-xl sm:text-2xl font-bold tracking-tight"
+        >
           Ready to start?
         </motion.h2>
         <motion.p variants={fadeUp} className="text-sm text-muted-foreground">
           No account. No paywall. Works offline.
         </motion.p>
         <motion.div variants={fadeUp}>
-          <Button size="lg" className="h-11 px-8 text-sm rounded-xl" onClick={onStartLearning}>
+          <Button
+            size="lg"
+            className="h-11 px-8 text-sm rounded-xl"
+            onClick={onStartLearning}
+          >
             Get Started Free
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
@@ -226,7 +247,7 @@ export const LandingPage = ({ totalWords, onStartLearning, onBrowseDictionary }:
           rel="noopener noreferrer"
           className="text-xs text-muted-foreground hover:text-primary transition-colors"
         >
-          Made by Bini — Questions or suggestions? Contact the developer →
+          Made by Bini
         </a>
       </motion.div>
     </div>
