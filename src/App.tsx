@@ -476,24 +476,33 @@ function App() {
     };
   }, [initialSession]);
 
-  // Hash-based deep linking
+  // Hash-based deep linking — read hash on mount
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      const view = hash.split('/')[0] as ViewMode;
+      if (isViewMode(view)) {
+        setCurrentView(view);
+      }
+    }
+  }, []);
+
+  // Listen for browser back/forward hash changes
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       if (!hash) return;
       const view = hash.split('/')[0] as ViewMode;
-      if (isViewMode(view) && view !== currentView) {
+      if (isViewMode(view)) {
         setCurrentView(view);
       }
     };
 
     window.addEventListener('hashchange', handleHashChange);
-    // Initial hash check
-    handleHashChange();
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [currentView]);
+  }, []);
 
-  // Update hash when view changes
+  // Update hash when view changes (replaceState does not trigger hashchange)
   useEffect(() => {
     const newHash = `#${currentView}`;
     if (window.location.hash !== newHash) {
