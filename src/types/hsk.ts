@@ -87,6 +87,10 @@ export interface StudyProgress {
   confidence: number;
   reviewCount: number;
   correctCount: number;
+  /** SM-2 style ease factor (default 2.5) */
+  easeFactor?: number;
+  /** Number of times this card was failed after graduating */
+  lapses?: number;
 }
 
 export interface UserStats {

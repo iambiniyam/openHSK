@@ -346,34 +346,78 @@ class HSKDataService {
   }
 
   updateProgress(entryId: string, correct: boolean): void {
+    // Backward compatibility: true = Good (3), false = Again (1)
+    this.updateProgressWithRating(entryId, correct ? 3 : 1);
+  }
+
+  updateProgressWithRating(entryId: string, rating: 1 | 2 | 3 | 4): void {
     const entry = this.getEntryById(entryId);
     if (!entry) return;
 
     const existing = this.progress.get(entryId);
     const now = Date.now();
-    
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
     if (existing) {
       existing.lastReviewed = now;
       existing.reviewCount++;
       this.incrementReviewedWords();
-      if (correct) {
-        existing.correctCount++;
-        existing.confidence = Math.min(existing.confidence + 0.1, 1);
-      } else {
-        existing.confidence = Math.max(existing.confidence - 0.2, 0);
+
+      const ease = existing.easeFactor ?? 2.5;
+      const prevIntervalDays = Math.max(1, Math.round((existing.nextReview - existing.lastReviewed) / DAY_MS));
+
+      let newIntervalDays: number;
+      let newEase = ease;
+      let newLapses = existing.lapses ?? 0;
+
+      switch (rating) {
+        case 1: // Again
+          newIntervalDays = 1;
+          newEase = Math.max(1.3, ease - 0.2);
+          newLapses++;
+          existing.confidence = Math.max(existing.confidence - 0.3, 0);
+          break;
+        case 2: // Hard
+          newIntervalDays = Math.max(1, Math.round(prevIntervalDays * ease * 0.8));
+          newEase = Math.max(1.3, ease - 0.15);
+          existing.confidence = Math.max(existing.confidence - 0.1, 0);
+          break;
+        case 3: // Good
+          newIntervalDays = Math.max(1, Math.round(prevIntervalDays * ease));
+          existing.confidence = Math.min(existing.confidence + 0.1, 1);
+          break;
+        case 4: // Easy
+          newIntervalDays = Math.max(1, Math.round(prevIntervalDays * ease * 1.3));
+          newEase = ease + 0.15;
+          existing.confidence = Math.min(existing.confidence + 0.2, 1);
+          break;
       }
-      // Simple SRS: next review in 1, 3, 7, 14, 30 days based on confidence
-      const days = [1, 3, 7, 14, 30][Math.floor(existing.confidence * 4)] || 1;
-      existing.nextReview = now + days * 24 * 60 * 60 * 1000;
+
+      existing.nextReview = now + newIntervalDays * DAY_MS;
+      existing.easeFactor = newEase;
+      existing.lapses = newLapses;
+      if (rating >= 3) {
+        existing.correctCount++;
+      }
     } else {
+      // New card initial intervals
+      const intervals: Record<number, { days: number; confidence: number }> = {
+        1: { days: 1, confidence: 0.1 },
+        2: { days: 2, confidence: 0.2 },
+        3: { days: 3, confidence: 0.3 },
+        4: { days: 7, confidence: 0.5 },
+      };
+      const init = intervals[rating];
       this.progress.set(entryId, {
         entryId,
         level: entry.source.level,
         lastReviewed: now,
-        nextReview: now + 24 * 60 * 60 * 1000,
-        confidence: correct ? 0.3 : 0.1,
+        nextReview: now + init.days * DAY_MS,
+        confidence: init.confidence,
         reviewCount: 1,
-        correctCount: correct ? 1 : 0
+        correctCount: rating >= 3 ? 1 : 0,
+        easeFactor: 2.5,
+        lapses: 0,
       });
       this.stats.totalStudied++;
       this.incrementNewWords();
@@ -486,7 +530,9 @@ class HSKDataService {
       typeof p.nextReview === 'number' &&
       typeof p.confidence === 'number' &&
       typeof p.reviewCount === 'number' &&
-      typeof p.correctCount === 'number'
+      typeof p.correctCount === 'number' &&
+      (p.easeFactor === undefined || typeof p.easeFactor === 'number') &&
+      (p.lapses === undefined || typeof p.lapses === 'number')
     );
   }
 

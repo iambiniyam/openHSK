@@ -31,6 +31,9 @@ import {
   Sparkles,
   ScrollText,
   Library,
+  AlertTriangle,
+  History,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +59,8 @@ import type { Book, BookDataset } from '@/types/books';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { TopProgressBar } from '@/components/TopProgressBar';
+import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import type { ProgressUpdate } from '@/lib/progressiveLoader';
 
 import './App.css';
@@ -93,7 +98,7 @@ interface PersistedUiSession {
 const isViewMode = (value: unknown): value is ViewMode => {
   return (
     typeof value === 'string' &&
-    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress', 'audio'].includes(value)
+    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress', 'audio', 'stories', 'books'].includes(value)
   );
 };
 
@@ -306,6 +311,21 @@ function App() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState('');
 
+  // Init error state
+  const [initError, setInitError] = useState(false);
+
+  // Search history
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('openhsk.search-history.v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.filter((s): s is string => typeof s === 'string').slice(0, 20);
+      }
+    } catch { /* ignore */ }
+    return [];
+  });
+
   // Welcome banner
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -421,6 +441,7 @@ function App() {
         console.error('Failed to initialize:', error);
         if (!disposed) {
           setDictionaryReady(false);
+          setInitError(true);
         }
       }
 
@@ -454,6 +475,31 @@ function App() {
       unifiedDictionary.abortLoad();
     };
   }, [initialSession]);
+
+  // Hash-based deep linking
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (!hash) return;
+      const view = hash.split('/')[0] as ViewMode;
+      if (isViewMode(view) && view !== currentView) {
+        setCurrentView(view);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    // Initial hash check
+    handleHashChange();
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [currentView]);
+
+  // Update hash when view changes
+  useEffect(() => {
+    const newHash = `#${currentView}`;
+    if (window.location.hash !== newHash) {
+      window.history.replaceState(null, '', newHash);
+    }
+  }, [currentView]);
 
   useEffect(() => {
     if (!dictionaryReady) return;
@@ -671,12 +717,12 @@ function App() {
     setCurrentView('study');
   }, []);
 
-  const handleStudyResult = useCallback((correct: boolean) => {
+  const handleStudyResult = useCallback((rating: 1 | 2 | 3 | 4) => {
     const entry = studyEntries[currentStudyIndex];
     if (entry) {
-      hskDataService.updateProgress(entry.id, correct);
+      hskDataService.updateProgressWithRating(entry.id, rating);
     }
-    
+
     if (currentStudyIndex < studyEntries.length - 1) {
       setCurrentStudyIndex(prev => prev + 1);
       setShowAnswer(false);
@@ -685,6 +731,39 @@ function App() {
       setCurrentView('dashboard');
     }
   }, [currentStudyIndex, studyEntries, refreshStats]);
+
+  // Study mode keyboard shortcuts
+  useEffect(() => {
+    if (currentView !== 'study' || showQuiz) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      if (!showAnswer) {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          setShowAnswer(true);
+        }
+      } else {
+        if (e.key >= '1' && e.key <= '4') {
+          e.preventDefault();
+          handleStudyResult(parseInt(e.key) as 1 | 2 | 3 | 4);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentView, showQuiz, showAnswer, handleStudyResult]);
+
+  const handleRetryInit = useCallback(() => {
+    setInitError(false);
+    setDictionaryReady(false);
+    setShowLoadingScreen(true);
+    // Re-trigger the init effect by forcing a reload
+    window.location.reload();
+  }, []);
 
   const handleExport = useCallback(() => {
     const data = hskDataService.exportData();
@@ -1062,6 +1141,18 @@ function App() {
                   setSearchQuery(e.target.value);
                   setBrowsePage(1);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    const trimmed = searchQuery.trim();
+                    setSearchHistory((prev) => {
+                      const next = [trimmed, ...prev.filter((s) => s !== trimmed)].slice(0, 20);
+                      try {
+                        localStorage.setItem('openhsk.search-history.v1', JSON.stringify(next));
+                      } catch { /* ignore */ }
+                      return next;
+                    });
+                  }
+                }}
                 className="pl-9 sm:pl-10 h-10 sm:h-12 text-base sm:text-lg"
               />
               {searchQuery && (
@@ -1078,6 +1169,35 @@ function App() {
                 </Button>
               )}
             </div>
+
+            {/* Search History */}
+            {searchHistory.length > 0 && !searchQuery && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <History className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                {searchHistory.slice(0, 8).map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => {
+                      setSearchQuery(term);
+                      setBrowsePage(1);
+                    }}
+                    className="text-xs px-2 py-1 rounded-full bg-muted hover:bg-muted/80 transition-colors text-muted-foreground"
+                  >
+                    {term}
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    setSearchHistory([]);
+                    try { localStorage.removeItem('openhsk.search-history.v1'); } catch { /* ignore */ }
+                  }}
+                  className="text-xs text-muted-foreground hover:text-destructive transition-colors ml-auto"
+                  title="Clear history"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            )}
             
             {/* Filters */}
             <div className="flex gap-2">
@@ -1289,7 +1409,12 @@ function App() {
           </div>
           <Suspense fallback={<SectionLoader label="Preparing quiz mode..." />}>
             <QuizMode
-              entries={entries.slice(0, 100)}
+              entries={(() => {
+                const rec = hskDataService.getRecommendedEntries(100);
+                return rec
+                  .map((hsk) => unifiedDictionary.getEntry(hsk.entry_id))
+                  .filter((e): e is UnifiedEntry => Boolean(e));
+              })()}
               onComplete={() => {
                 hskDataService.incrementQuizzes();
                 refreshStats();
@@ -1362,14 +1487,20 @@ function App() {
                     </div>
                   )}
 
-                  <div className="flex gap-2 justify-center pt-4">
-                    <Button variant="destructive" onClick={() => handleStudyResult(false)}>
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Again
+                  <div className="flex flex-wrap gap-2 justify-center pt-4">
+                    <Button variant="destructive" onClick={() => handleStudyResult(1)} className="flex-1 min-w-[100px]">
+                      <XCircle className="w-4 h-4 mr-1.5" />
+                      Again <span className="ml-1 opacity-70 text-xs">(1)</span>
                     </Button>
-                    <Button variant="default" onClick={() => handleStudyResult(true)}>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Got it
+                    <Button variant="outline" onClick={() => handleStudyResult(2)} className="flex-1 min-w-[100px] border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10">
+                      Hard <span className="ml-1 opacity-70 text-xs">(2)</span>
+                    </Button>
+                    <Button variant="default" onClick={() => handleStudyResult(3)} className="flex-1 min-w-[100px]">
+                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                      Good <span className="ml-1 opacity-70 text-xs">(3)</span>
+                    </Button>
+                    <Button variant="secondary" onClick={() => handleStudyResult(4)} className="flex-1 min-w-[100px] bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60">
+                      Easy <span className="ml-1 opacity-70 text-xs">(4)</span>
                     </Button>
                   </div>
                 </motion.div>
@@ -1378,7 +1509,7 @@ function App() {
 
             {!showAnswer && (
               <Button className="w-full" size="lg" onClick={() => setShowAnswer(true)}>
-                Show Answer
+                Show Answer <span className="ml-2 opacity-60 text-sm">(Space)</span>
               </Button>
             )}
           </div>
@@ -1653,6 +1784,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background brand-atmosphere">
+      <OfflineBanner />
+      <KeyboardShortcutsHelp />
       {/* Header */}
       <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -1957,6 +2090,24 @@ function App() {
             >
               {currentView === 'landing' ? (
                 renderLanding()
+              ) : initError ? (
+                <Card className="max-w-md mx-auto mt-12">
+                  <CardContent className="p-8 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+                      <AlertTriangle className="w-8 h-8 text-destructive" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold mb-1">Failed to Load Data</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Couldn't load the HSK dictionary. You may be offline or the data files are unavailable.
+                      </p>
+                    </div>
+                    <Button onClick={handleRetryInit} className="w-full">
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Retry
+                    </Button>
+                  </CardContent>
+                </Card>
               ) : !dictionaryReady ? (
                 <SectionLoader label="Preparing your HSK data for this section..." />
               ) : (

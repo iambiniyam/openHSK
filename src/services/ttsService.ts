@@ -528,7 +528,7 @@ class TTSService {
     this.synth?.cancel();
   }
 
-  speakWithTones(text: string, _pinyin?: string): Promise<void> {
+  speakWithTones(text: string): Promise<void> {
     return this.speak(text);
   }
 
