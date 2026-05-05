@@ -248,15 +248,19 @@ export const AudioPlaylist: React.FC = () => {
             <Button
               size="lg"
               onClick={isPlaying ? pausePlayback : startPlayback}
-              disabled={playlist.length === 0 || isLoading}
-              className="w-16 h-16 rounded-full"
+              disabled={playlist.length === 0}
+              className="w-16 h-16 rounded-full relative"
             >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-current"></div>
-              ) : isPlaying ? (
+              {isPlaying ? (
                 <Pause className="h-6 w-6" />
               ) : (
                 <Play className="h-6 w-6" />
+              )}
+              {isLoading && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+                </span>
               )}
             </Button>
 

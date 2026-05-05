@@ -490,38 +490,42 @@ function App() {
   }, [initialSession]);
 
   // Hash-based deep linking — read hash on mount
+  // Read hash and restore view-specific state on mount / when data loads
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
     if (!hash) return;
     const [view, ...params] = hash.split('/');
-    if (isViewMode(view)) {
-      setCurrentView(view);
-      // Restore detail view state
-      if (view === 'detail' && params[0] && dictionaryReady) {
-        const entry = unifiedDictionary.getAllEntries().find(e => e.id === params[0] || e.hanzi === decodeURIComponent(params[0]));
-        if (entry) {
-          setSelectedEntry(entry);
-          setDetailSequence([entry]);
-          setDetailReturnView('browse');
-        }
-      }
-      // Restore story reader state
-      if (view === 'stories' && params[0] === 'reader' && params[1] && storyDataset) {
-        const idx = parseInt(params[1], 10);
-        if (!isNaN(idx) && storyDataset.stories[idx]) {
-          setCurrentStoryIndex(idx);
-          setStoryView('reader');
-        }
-      }
-      // Restore book reader state
-      if (view === 'books' && params[0] === 'reader' && params[1] && bookDataset) {
-        const idx = parseInt(params[1], 10);
-        if (!isNaN(idx) && bookDataset.books[idx]) {
-          setCurrentBookIndex(idx);
-          setBookView('reader');
-        }
+    if (!isViewMode(view)) return;
+
+    // Use a single batch update to avoid multiple re-renders
+    const updates: (() => void)[] = [];
+    updates.push(() => setCurrentView(view));
+
+    if (view === 'detail' && params[0] && dictionaryReady) {
+      const entry = unifiedDictionary.getAllEntries().find(e => e.id === params[0] || e.hanzi === decodeURIComponent(params[0]));
+      if (entry) {
+        updates.push(() => setSelectedEntry(entry));
+        updates.push(() => setDetailSequence([entry]));
+        updates.push(() => setDetailReturnView('browse'));
       }
     }
+    if (view === 'stories' && params[0] === 'reader' && params[1] && storyDataset) {
+      const idx = parseInt(params[1], 10);
+      if (!isNaN(idx) && storyDataset.stories[idx]) {
+        updates.push(() => setCurrentStoryIndex(idx));
+        updates.push(() => setStoryView('reader'));
+      }
+    }
+    if (view === 'books' && params[0] === 'reader' && params[1] && bookDataset) {
+      const idx = parseInt(params[1], 10);
+      if (!isNaN(idx) && bookDataset.books[idx]) {
+        updates.push(() => setCurrentBookIndex(idx));
+        updates.push(() => setBookView('reader'));
+      }
+    }
+
+    // Apply all state updates in a microtask to batch them
+    Promise.resolve().then(() => updates.forEach(fn => fn()));
   }, [dictionaryReady, storyDataset, bookDataset]);
 
   // Listen for browser back/forward hash changes
@@ -2083,14 +2087,14 @@ function App() {
                       {/* Voice Quality Indicator */}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Voice Quality</Label>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-2 flex-wrap">
                           <Badge
                             variant={voiceQuality.score >= 80 ? 'default' : voiceQuality.score >= 50 ? 'secondary' : 'destructive'}
-                            className="text-xs"
+                            className="text-xs shrink-0 mt-0.5"
                           >
                             {voiceQuality.label}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground break-words flex-1 min-w-0">
                             {voiceQuality.description}
                           </span>
                         </div>

@@ -455,11 +455,6 @@ export const BookReader = ({
 
                 <div className="flex-1" />
 
-                {/* Font size */}
-                <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
-                  <ReaderSettingsPanel settings={readerSettings} onChange={setReaderSettings} />
-                </div>
-
                 {/* Read aloud */}
                 <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
                   {isPlaying && !isPaused ? (

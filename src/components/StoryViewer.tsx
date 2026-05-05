@@ -21,7 +21,7 @@ import { Toggle } from '@/components/ui/toggle';
 import { ttsService } from '@/services/ttsService';
 import type { StoryEntry } from '@/types/stories';
 import { ChineseText } from './ChineseText';
-import { ReaderSettingsPanel, loadReaderSettings, type ReaderSettings } from './ReaderSettings';
+import { ReaderSettingsPanel, loadReaderSettings, getFontSizeClass, getLineSpacingClass, getChineseFontClass, type ReaderSettings } from './ReaderSettings';
 
 interface StoryViewerProps {
   story: StoryEntry;
@@ -303,7 +303,7 @@ export const StoryViewer = ({
                           </span>
                           <div className="space-y-1 flex-1 min-w-0">
                             <div
-                              className={`text-xl leading-relaxed tracking-wide font-cn transition-colors duration-200 ${
+                              className={`${getFontSizeClass(readerSettings.fontSize)} ${getLineSpacingClass(readerSettings.lineSpacing)} ${getChineseFontClass(readerSettings.chineseFont)} tracking-wide transition-colors duration-200 ${
                                 isCurrent ? 'text-foreground font-semibold' : ''
                               } ${readerSettings.pinyinMode === 'always' ? 'py-1' : ''}`}
                             >
@@ -371,7 +371,7 @@ export const StoryViewer = ({
                 <div className="space-y-4">
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">中文</div>
-                    <div className="text-xl leading-relaxed tracking-wide font-cn">
+                    <div className={`${getFontSizeClass(readerSettings.fontSize)} ${getLineSpacingClass(readerSettings.lineSpacing)} ${getChineseFontClass(readerSettings.chineseFont)} tracking-wide`}>
                       <ChineseText
                         text={story.story_chinese}
                         pinyin={story.story_pinyin}
@@ -384,7 +384,7 @@ export const StoryViewer = ({
                   {readerSettings.pinyinMode === 'off' && story.story_pinyin && (
                     <div className="border-t pt-4">
                       <div className="text-sm text-muted-foreground mb-1">拼音</div>
-                      <div className="text-base text-primary/70 italic leading-relaxed">
+                      <div className={`text-base text-primary/70 italic ${getLineSpacingClass(readerSettings.lineSpacing)}`}>
                         {story.story_pinyin}
                       </div>
                     </div>
