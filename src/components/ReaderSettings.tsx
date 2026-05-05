@@ -112,7 +112,7 @@ export function ReaderSettingsPanel({ settings, onChange }: ReaderSettingsPanelP
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-border rounded-xl shadow-xl p-4 z-50 space-y-4">
+          <div className="absolute left-0 top-full mt-2 w-64 bg-card border border-border rounded-xl shadow-xl p-4 z-50 space-y-4">
             {/* Theme */}
             <div>
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">

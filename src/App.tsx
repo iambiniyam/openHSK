@@ -2150,6 +2150,18 @@ function App() {
                     <Mic className="w-4 h-4 mr-2" />
                     Test Voice
                   </Button>
+
+                  {/* Developer */}
+                  <div className="pt-3 border-t text-center">
+                    <a
+                      href="https://thebini.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      Questions or suggestions? Contact the developer →
+                    </a>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
