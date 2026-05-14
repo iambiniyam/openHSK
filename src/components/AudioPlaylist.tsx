@@ -70,19 +70,24 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
   const [sessionStartTime] = useState(() => Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Refs for background-safe playback
+  // Refs for background-safe playback — refs are always up-to-date
   const isPlayingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const silentAudioRef = useRef<HTMLAudioElement | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const playLoopPromiseRef = useRef<Promise<void> | null>(null);
   const skipRequestedRef = useRef(false);
-  const currentIndexRef = useRef(0);
-  const playlistRef = useRef<HSKEntry[]>([]);
 
-  // Keep refs in sync
-  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
-  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
+  // Mutable snapshot of all loop state — updated synchronously
+  const loopStateRef = useRef({
+    currentIndex: 0,
+    playlist: [] as HSKEntry[],
+    settings: DEFAULT_SETTINGS,
+  });
+
+  // Sync loop state ref synchronously on every render
+  loopStateRef.current.currentIndex = currentIndex;
+  loopStateRef.current.playlist = playlist;
+  loopStateRef.current.settings = settings;
 
   // Session timer
   useEffect(() => {
@@ -125,13 +130,6 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
     }
   }, [settings]);
 
-  // Sync currentWord with currentIndex
-  useEffect(() => {
-    if (playlist.length > 0) {
-      setCurrentWord(playlist[currentIndex] || null);
-    }
-  }, [currentIndex, playlist]);
-
   // Stop playback when settings that affect playlist change
   useEffect(() => {
     pausePlayback();
@@ -152,39 +150,6 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
       silentAudioRef.current = null;
     };
   }, []);
-
-  // Media Session API
-  useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
-
-    const nav = navigator as Navigator & { mediaSession: MediaSession };
-
-    nav.mediaSession.setActionHandler('play', () => startPlayback());
-    nav.mediaSession.setActionHandler('pause', () => pausePlayback());
-    nav.mediaSession.setActionHandler('previoustrack', () => skipBackward());
-    nav.mediaSession.setActionHandler('nexttrack', () => skipForward());
-
-    return () => {
-      nav.mediaSession.setActionHandler('play', null);
-      nav.mediaSession.setActionHandler('pause', null);
-      nav.mediaSession.setActionHandler('previoustrack', null);
-      nav.mediaSession.setActionHandler('nexttrack', null);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Update media session metadata when current word changes
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !currentWord) return;
-
-    const nav = navigator as Navigator & { mediaSession: MediaSession };
-    nav.mediaSession.metadata = new MediaMetadata({
-      title: currentWord.source.hanzi,
-      artist: `${currentWord.source.pinyin}`,
-      album: `OpenHSK • HSK ${currentWord.source.level}`,
-    });
-    nav.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-  }, [currentWord, isPlaying]);
 
   // Request/release wake lock
   const requestWakeLock = useCallback(async () => {
@@ -217,26 +182,14 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [requestWakeLock]);
 
-  const speakWord = useCallback(async (entry: HSKEntry, signal: AbortSignal): Promise<void> => {
-    setCurrentWord(entry);
-    setWordsHeard(prev => prev + 1);
-
-    await ttsService.speakWithRate(entry.source.hanzi, settings.playbackSpeed);
-    if (signal.aborted) return;
-
-    if (settings.includeEnglish && entry.core.english_definitions.length > 0) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      if (signal.aborted) return;
-      await ttsService.speakWithRate(entry.core.english_definitions[0], settings.playbackSpeed);
-    }
-  }, [settings.includeEnglish, settings.playbackSpeed]);
-
-  // Main playback loop
+  // Main playback loop — no dependencies on changing state, reads everything from loopStateRef
   const runPlaybackLoop = useCallback(async () => {
     while (isPlayingRef.current) {
-      const idx = currentIndexRef.current;
-      const pl = playlistRef.current;
+      const state = loopStateRef.current;
+      const idx = state.currentIndex;
+      const pl = state.playlist;
       const entry = pl[idx];
+
       if (!entry) {
         setIsPlaying(false);
         isPlayingRef.current = false;
@@ -246,13 +199,25 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      // Update UI for current word
+      setCurrentWord(entry);
+      setWordsHeard(prev => prev + 1);
       setIsLoading(true);
+
       try {
-        for (let rep = 0; rep < settings.repetitions; rep++) {
+        for (let rep = 0; rep < state.settings.repetitions; rep++) {
           if (!isPlayingRef.current || controller.signal.aborted) break;
-          await speakWord(entry, controller.signal);
+
+          await ttsService.speakWithRate(entry.source.hanzi, state.settings.playbackSpeed);
           if (!isPlayingRef.current || controller.signal.aborted) break;
-          if (rep < settings.repetitions - 1) {
+
+          if (state.settings.includeEnglish && entry.core.english_definitions.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            if (!isPlayingRef.current || controller.signal.aborted) break;
+            await ttsService.speakWithRate(entry.core.english_definitions[0], state.settings.playbackSpeed);
+          }
+
+          if (rep < state.settings.repetitions - 1) {
             await new Promise(r => setTimeout(r, 800));
           }
         }
@@ -266,7 +231,7 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
       if (!isPlayingRef.current) break;
 
       // Pause between words
-      const pauseMs = Math.max(settings.pauseDuration * 1000, 500);
+      const pauseMs = Math.max(state.settings.pauseDuration * 1000, 500);
       await new Promise(r => setTimeout(r, pauseMs));
       if (!isPlayingRef.current) break;
 
@@ -287,7 +252,7 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
     if (nav.mediaSession) {
       nav.mediaSession.playbackState = 'paused';
     }
-  }, [settings.repetitions, settings.pauseDuration, speakWord, releaseWakeLock]);
+  }, [releaseWakeLock]);
 
   const startPlayback = useCallback(() => {
     if (playlist.length === 0) return;
@@ -303,7 +268,7 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
     void requestWakeLock();
 
     // Start the loop
-    playLoopPromiseRef.current = runPlaybackLoop();
+    void runPlaybackLoop();
   }, [playlist.length, requestWakeLock, runPlaybackLoop]);
 
   const pausePlayback = useCallback(() => {
@@ -348,7 +313,6 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
     if (playlist.length === 0) return;
     skipRequestedRef.current = true;
     abortControllerRef.current?.abort();
-    // Don't change index — just re-trigger the current word
     if (!isPlayingRef.current) {
       startPlayback();
     }
@@ -370,6 +334,39 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
     setCurrentWord(playlist[0] || null);
     setWordsHeard(0);
   }, [pausePlayback, playlist]);
+
+  // Media Session API
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    const nav = navigator as Navigator & { mediaSession: MediaSession };
+
+    nav.mediaSession.setActionHandler('play', () => startPlayback());
+    nav.mediaSession.setActionHandler('pause', () => pausePlayback());
+    nav.mediaSession.setActionHandler('previoustrack', () => skipBackward());
+    nav.mediaSession.setActionHandler('nexttrack', () => skipForward());
+
+    return () => {
+      nav.mediaSession.setActionHandler('play', null);
+      nav.mediaSession.setActionHandler('pause', null);
+      nav.mediaSession.setActionHandler('previoustrack', null);
+      nav.mediaSession.setActionHandler('nexttrack', null);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update media session metadata when current word changes
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentWord) return;
+
+    const nav = navigator as Navigator & { mediaSession: MediaSession };
+    nav.mediaSession.metadata = new MediaMetadata({
+      title: currentWord.source.hanzi,
+      artist: `${currentWord.source.pinyin}`,
+      album: `OpenHSK • HSK ${currentWord.source.level}`,
+    });
+    nav.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [currentWord, isPlaying]);
 
   // Keyboard shortcuts
   useEffect(() => {
