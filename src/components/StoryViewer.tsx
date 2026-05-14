@@ -20,7 +20,7 @@ import { Toggle } from '@/components/ui/toggle';
 import { ttsService } from '@/services/ttsService';
 import type { StoryEntry } from '@/types/stories';
 import { ChineseText } from './ChineseText';
-import { ReaderSettingsPanel, loadReaderSettings, getFontSizeClass, getLineSpacingClass, getChineseFontClass, type ReaderSettings } from './ReaderSettings';
+import { ReaderSettingsPanel, loadReaderSettings, getFontSizeClass, getLineSpacingClass, getChineseFontClass, getThemeClasses, type ReaderSettings } from './ReaderSettings';
 
 interface StoryViewerProps {
   story: StoryEntry;
@@ -50,7 +50,16 @@ export const StoryViewer = ({
   // TTS read-along state
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentSentence, setCurrentSentence] = useState(-1);
+  const [currentSentence, setCurrentSentence] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`openhsk.story-position.${story.story_id}.v1`);
+      if (saved) {
+        const pos = JSON.parse(saved);
+        if (typeof pos.sentence === 'number') return pos.sentence;
+      }
+    } catch { /* ignore */ }
+    return -1;
+  });
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const hasSentences = (story.sentences?.length || 0) > 0;
@@ -61,7 +70,16 @@ export const StoryViewer = ({
     ttsService.stop();
     setIsPlaying(false);
     setIsPaused(false);
-    setCurrentSentence(-1);
+    setCurrentSentence(() => {
+      try {
+        const saved = localStorage.getItem(`openhsk.story-position.${story.story_id}.v1`);
+        if (saved) {
+          const pos = JSON.parse(saved);
+          if (typeof pos.sentence === 'number') return pos.sentence;
+        }
+      } catch { /* ignore */ }
+      return -1;
+    });
     return () => { ttsService.stop(); };
   }, [story.story_id]);
 
@@ -74,6 +92,13 @@ export const StoryViewer = ({
       });
     }
   }, [currentSentence]);
+
+  // Persist reading position
+  useEffect(() => {
+    try {
+      localStorage.setItem(`openhsk.story-position.${story.story_id}.v1`, JSON.stringify({ sentence: currentSentence }));
+    } catch { /* ignore */ }
+  }, [currentSentence, story.story_id]);
 
   const handleSpeakSentence = useCallback((text: string) => {
     ttsService.speak(text);
@@ -218,7 +243,7 @@ export const StoryViewer = ({
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className={`space-y-6 rounded-b-xl transition-colors duration-300 ${getThemeClasses(readerSettings.theme)}`}>
             {/* Display Options + TTS */}
             <div className="flex items-center gap-2 border-b pb-3 flex-wrap">
               <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
@@ -287,7 +312,7 @@ export const StoryViewer = ({
                             handlePlayFromIndex(i);
                           }}
                         >
-                          <span className="text-xs text-muted-foreground mt-0.5 shrink-0 w-6 text-right tabular-nums">
+                          <span className="text-xs text-muted-foreground/80 mt-0.5 shrink-0 w-6 text-right tabular-nums font-medium">
                             {i + 1}
                           </span>
                           <div className="space-y-1 flex-1 min-w-0">
@@ -366,6 +391,7 @@ export const StoryViewer = ({
                         pinyin={story.story_pinyin}
                         settings={readerSettings}
                         onWordClick={onWordClick}
+                        highlightChars={showVocabList && story.word_usage ? new Set(story.word_usage.map(u => u.hanzi)) : undefined}
                       />
                     </div>
                   </div>

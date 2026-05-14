@@ -12,6 +12,7 @@ interface ChineseTextProps {
   settings: ReaderSettings;
   onWordClick?: (hanzi: string) => void;
   className?: string;
+  highlightChars?: Set<string>;
 }
 
 export function ChineseText({
@@ -20,6 +21,7 @@ export function ChineseText({
   settings,
   onWordClick,
   className = '',
+  highlightChars,
 }: ChineseTextProps) {
   const [popup, setPopup] = useState<{
     hanzi: string;
@@ -59,10 +61,11 @@ export function ChineseText({
               return <span key={i} className="inline">{item.char}</span>;
             }
 
+            const isHighlight = highlightChars?.has(item.char);
             const rubyElement = (
               <ruby
                 key={i}
-                className={`ruby-char ${settings.pinyinMode === 'hover' ? 'ruby-hover' : ''}`}
+                className={`ruby-char ${settings.pinyinMode === 'hover' ? 'ruby-hover' : ''} ${isHighlight ? 'bg-amber-200/60 dark:bg-amber-700/40 rounded px-0.5' : ''}`}
                 onClick={(e) => handleCharClick(item.char, e)}
               >
                 {item.char}
@@ -99,10 +102,11 @@ export function ChineseText({
           if (!isChinese || !onWordClick) {
             return <span key={i}>{char}</span>;
           }
+          const isHighlight = highlightChars?.has(char);
           return (
             <span
               key={i}
-              className="clickable-char cursor-pointer hover:text-primary hover:underline decoration-primary/40 underline-offset-4 transition-colors"
+              className={`clickable-char cursor-pointer hover:text-primary hover:underline decoration-primary/40 underline-offset-4 transition-colors ${isHighlight ? 'bg-amber-200/60 dark:bg-amber-700/40 rounded px-0.5' : ''}`}
               onClick={(e) => handleCharClick(char, e)}
             >
               {char}

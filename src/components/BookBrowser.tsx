@@ -99,6 +99,12 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
     return [...gs.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [books]);
 
+  const bookIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    books.forEach((b, i) => map.set(b.book_id, i));
+    return map;
+  }, [books]);
+
   const filteredBooks = useMemo(() => {
     let result = books.filter((b) => !b.error);
     if (selectedLevel !== 'all') {
@@ -117,6 +123,20 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
     }
     return result;
   }, [books, selectedLevel, selectedGenre, searchQuery]);
+
+  const getBookProgress = useMemo(() => {
+    const progressMap = new Map<string, { completed: number; total: number }>();
+    for (const book of books) {
+      try {
+        const saved = localStorage.getItem(`openhsk.book-progress.${book.book_id}.v1`);
+        if (saved) {
+          const completed = new Set<number>(JSON.parse(saved));
+          progressMap.set(book.book_id, { completed: completed.size, total: book.total_chapters });
+        }
+      } catch { /* ignore */ }
+    }
+    return progressMap;
+  }, [books]);
 
   return (
     <div className="space-y-6">
@@ -215,7 +235,7 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBooks.map((book, i) => {
-            const originalIndex = books.findIndex((b) => b.book_id === book.book_id);
+
             const spineColor = levelSpineColors[book.hsk_level] || levelSpineColors[7];
             const accent = genreAccent[book.genre] || '';
             const bgGradient = genreGradient[book.genre] || '';
@@ -227,11 +247,11 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
                 key={book.book_id}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.35 }}
+                transition={{ delay: Math.min(i * 0.04, 0.4), duration: 0.35 }}
               >
                 <div
                   className="group cursor-pointer"
-                  onClick={() => onBookSelect(book, originalIndex)}
+                  onClick={() => onBookSelect(book, bookIndexMap.get(book.book_id) ?? 0)}
                 >
                   {/* Book with spine effect */}
                   <div className={`relative rounded-xl border bg-gradient-to-br ${bgGradient} border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden`}>
@@ -289,11 +309,25 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
                         <Progress value={progress} className="h-1" />
                       </div>
 
-                      {/* CTA */}
-                      <div className="mt-4 flex justify-end">
-                        <Button variant="outline" size="sm" className="text-xs gap-1.5 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      {/* Reading progress + CTA */}
+                      <div className="mt-4 flex items-center gap-3">
+                        {(() => {
+                          const prog = getBookProgress.get(book.book_id);
+                          if (!prog || prog.completed === 0) return null;
+                          const pct = Math.round((prog.completed / prog.total) * 100);
+                          return (
+                            <div className="flex-1 space-y-1">
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>{prog.completed}/{prog.total} chapters</span>
+                                <span>{pct}%</span>
+                              </div>
+                              <Progress value={pct} className="h-1" />
+                            </div>
+                          );
+                        })()}
+                        <Button variant="outline" size="sm" className="text-xs gap-1.5 group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
                           <BookOpen className="w-3.5 h-3.5" />
-                          Start Reading
+                          {getBookProgress.has(book.book_id) && getBookProgress.get(book.book_id)!.completed > 0 ? 'Continue' : 'Start Reading'}
                         </Button>
                       </div>
                     </div>

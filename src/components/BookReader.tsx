@@ -27,7 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ttsService } from '@/services/ttsService';
 import type { Book } from '@/types/books';
 import { ChineseText } from './ChineseText';
-import { ReaderSettingsPanel, loadReaderSettings, getFontSizeClass, getLineSpacingClass, getChineseFontClass, type ReaderSettings } from './ReaderSettings';
+import { ReaderSettingsPanel, loadReaderSettings, getFontSizeClass, getLineSpacingClass, getChineseFontClass, getThemeClasses, type ReaderSettings } from './ReaderSettings';
 
 interface BookReaderProps {
   book: Book;
@@ -292,7 +292,7 @@ export const BookReader = ({
       </motion.div>
 
       {/* Chapter Navigation Bar */}
-      <div className="flex items-center gap-2 sticky top-20 z-10 bg-background/95 backdrop-blur py-2 -mx-1 px-1 rounded-lg">
+      <div className="flex items-center gap-2 sticky top-20 z-30 bg-background/95 backdrop-blur py-2 -mx-1 px-1 rounded-lg">
         {/* Book prev/next */}
         <div className="flex items-center gap-1">
           {onPrevious && (
@@ -397,7 +397,7 @@ export const BookReader = ({
           transition={{ duration: 0.25 }}
           ref={contentRef}
         >
-          <Card className="shadow-lg">
+          <Card className="shadow-lg overflow-hidden">
             {/* Chapter Header */}
             <div className="border-b px-5 py-4 sm:px-6 sm:py-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -425,7 +425,7 @@ export const BookReader = ({
               </div>
             </div>
 
-            <CardContent className="p-5 sm:p-6 space-y-5">
+            <CardContent className={`p-5 sm:p-6 space-y-5 transition-colors duration-300 ${getThemeClasses(readerSettings.theme)}`}>
               {/* Reading Controls */}
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Display options */}
@@ -503,7 +503,7 @@ export const BookReader = ({
                           handlePlayFromIndex(i);
                         }}
                       >
-                        <span className="text-[10px] text-muted-foreground/50 mt-1.5 shrink-0 w-5 text-right tabular-nums">
+                        <span className="text-xs text-muted-foreground/80 mt-1 shrink-0 w-5 text-right tabular-nums font-medium">
                           {i + 1}
                         </span>
                         <div className="space-y-1.5 flex-1 min-w-0">
@@ -517,6 +517,7 @@ export const BookReader = ({
                               pinyin={sentence.pinyin}
                               settings={readerSettings}
                               onWordClick={onWordClick}
+                              highlightChars={showVocab ? new Set(chapterWordUsage.map(u => u.hanzi).filter(h => sentence.chinese.includes(h)).flatMap(h => Array.from(h))) : undefined}
                             />
                           </div>
                           {readerSettings.pinyinMode === 'off' && sentence.pinyin && (

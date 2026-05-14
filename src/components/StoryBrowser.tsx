@@ -41,6 +41,12 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
 
+  const storyIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    stories.forEach((s, i) => map.set(s.story_id, i));
+    return map;
+  }, [stories]);
+
   const filteredStories = useMemo(() => {
     let result = stories.filter((s) => !s.error);
 
@@ -181,7 +187,6 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredStories.map((story, i) => {
-            const originalIndex = stories.findIndex((s) => s.story_id === story.story_id);
             const levelColor = hskLevelColors[story.hsk_level] || hskLevelColors[7];
 
             return (
@@ -189,11 +194,11 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
                 key={story.story_id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
+                transition={{ delay: Math.min(i * 0.03, 0.3), duration: 0.3 }}
               >
                 <Card
                   className="cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group h-full"
-                  onClick={() => onStorySelect(story, originalIndex)}
+                  onClick={() => onStorySelect(story, storyIndexMap.get(story.story_id) ?? 0)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
