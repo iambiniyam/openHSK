@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import HanziWriter from 'hanzi-writer';
+import HanziWriter, { type CharacterJson } from 'hanzi-writer';
 import { Button } from '@/components/ui/button';
 import { Play, RotateCcw, Eye, EyeOff, PenTool, CheckCircle2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { makemeahanziService } from '@/services/makemeahanziService';
 
 interface HanziWriterComponentProps {
   character: string;
@@ -40,6 +41,20 @@ export const HanziWriterComponent = ({
     // Detect dark mode for stroke colors
     const isDark = document.documentElement.classList.contains('dark');
 
+    // Custom char data loader using local makemeahanzi data
+    const charDataLoader = (char: string, onLoad: (data: CharacterJson) => void, onError: (err?: string) => void) => {
+      makemeahanziService.loadData().then(() => {
+        const graphics = makemeahanziService.getGraphics(char);
+        if (graphics) {
+          onLoad(graphics as CharacterJson);
+        } else {
+          onError('No stroke data available');
+        }
+      }).catch((err) => {
+        onError(String(err));
+      });
+    };
+
     // Create HanziWriter instance
     const writer = HanziWriter.create(container, character, {
       width: size,
@@ -59,6 +74,7 @@ export const HanziWriterComponent = ({
       drawingColor: isDark ? '#e2e8f0' : '#333',
       drawingWidth: 4,
       showHintAfterMisses: 3,
+      charDataLoader,
       onLoadCharDataError: () => {
         setError(true);
         setIsLoading(false);
