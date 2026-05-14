@@ -14,7 +14,7 @@ interface AudioPlaylistSettings {
   selectedLevels: number[];
   playbackSpeed: number;
   repetitions: number;
-  pauseDuration: number; // in seconds
+  pauseDuration: number;
   includeEnglish: boolean;
   shuffle: boolean;
 }
@@ -30,6 +30,9 @@ const DEFAULT_SETTINGS: AudioPlaylistSettings = {
 
 const AUDIO_PLAYLIST_SETTINGS_KEY = 'openhsk.audio-playlist.v1';
 
+// Tiny silent WAV to keep audio session alive in background
+const SILENT_AUDIO_URL = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAA==';
+
 export const AudioPlaylist: React.FC = () => {
   const [settings, setSettings] = useState<AudioPlaylistSettings>(() => {
     if (typeof window !== 'undefined') {
@@ -37,13 +40,12 @@ export const AudioPlaylist: React.FC = () => {
         const saved = localStorage.getItem(AUDIO_PLAYLIST_SETTINGS_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
-          // Validate the parsed settings
           if (parsed && typeof parsed === 'object') {
             return { ...DEFAULT_SETTINGS, ...parsed };
           }
         }
-      } catch (error) {
-        console.warn('Failed to load audio playlist settings:', error);
+      } catch {
+        // ignore
       }
     }
     return DEFAULT_SETTINGS;
@@ -55,8 +57,12 @@ export const AudioPlaylist: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [currentWord, setCurrentWord] = useState<HSKEntry | null>(null);
 
-  const playbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Refs for background-safe playback
   const isPlayingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const silentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const playLoopPromiseRef = useRef<Promise<void> | null>(null);
 
   // Load playlist based on selected levels
   const loadPlaylist = useCallback(() => {
@@ -84,98 +90,222 @@ export const AudioPlaylist: React.FC = () => {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(AUDIO_PLAYLIST_SETTINGS_KEY, JSON.stringify(settings));
-      } catch (error) {
-        console.warn('Failed to save audio playlist settings:', error);
+      } catch {
+        // ignore
       }
     }
   }, [settings]);
+
+  // Sync currentWord with currentIndex
+  useEffect(() => {
+    if (playlist.length > 0) {
+      setCurrentWord(playlist[currentIndex] || null);
+    }
+  }, [currentIndex, playlist]);
 
   // Stop playback when settings that affect playlist change
   useEffect(() => {
     pausePlayback();
     setCurrentIndex(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.selectedLevels, settings.shuffle]);
 
-  const speakWord = useCallback(async (entry: HSKEntry): Promise<void> => {
+  // Initialize silent audio keepalive
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const audio = new Audio(SILENT_AUDIO_URL);
+      audio.loop = true;
+      audio.volume = 0.001;
+      silentAudioRef.current = audio;
+    }
+    return () => {
+      silentAudioRef.current?.pause();
+      silentAudioRef.current = null;
+    };
+  }, []);
+
+  // Media Session API
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    const nav = navigator as Navigator & { mediaSession: MediaSession };
+
+    nav.mediaSession.setActionHandler('play', () => startPlayback());
+    nav.mediaSession.setActionHandler('pause', () => pausePlayback());
+    nav.mediaSession.setActionHandler('previoustrack', () => skipBackward());
+    nav.mediaSession.setActionHandler('nexttrack', () => skipForward());
+
+    return () => {
+      nav.mediaSession.setActionHandler('play', null);
+      nav.mediaSession.setActionHandler('pause', null);
+      nav.mediaSession.setActionHandler('previoustrack', null);
+      nav.mediaSession.setActionHandler('nexttrack', null);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update media session metadata when current word changes
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentWord) return;
+
+    const nav = navigator as Navigator & { mediaSession: MediaSession };
+    nav.mediaSession.metadata = new MediaMetadata({
+      title: currentWord.source.hanzi,
+      artist: `${currentWord.source.pinyin}`,
+      album: `OpenHSK • HSK ${currentWord.source.level}`,
+    });
+    nav.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [currentWord, isPlaying]);
+
+  // Request/release wake lock
+  const requestWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      const nav = navigator as Navigator & { wakeLock: { request(type: string): Promise<WakeLockSentinel> } };
+      wakeLockRef.current = await nav.wakeLock.request('screen');
+    } catch {
+      // ignore — wake lock may not be available
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+  }, []);
+
+  // Handle page visibility changes
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // Page went to background — wake lock may be released by OS
+        // We re-request it when becoming visible again if still playing
+      } else if (isPlayingRef.current) {
+        void requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [requestWakeLock]);
+
+  const speakWord = useCallback(async (entry: HSKEntry, signal: AbortSignal): Promise<void> => {
     setCurrentWord(entry);
 
-    await ttsService.speak(entry.source.hanzi);
+    await ttsService.speakWithRate(entry.source.hanzi, settings.playbackSpeed);
+    if (signal.aborted) return;
 
     if (settings.includeEnglish && entry.core.english_definitions.length > 0) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await ttsService.speak(entry.core.english_definitions[0]);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      if (signal.aborted) return;
+      await ttsService.speakWithRate(entry.core.english_definitions[0], settings.playbackSpeed);
     }
-  }, [settings.includeEnglish]);
+  }, [settings.includeEnglish, settings.playbackSpeed]);
 
-  const settingsRef = useRef(settings);
-  settingsRef.current = settings;
-  const playlistRef = useRef(playlist);
-  playlistRef.current = playlist;
-  const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
-
-  const speakWordRef = useRef(speakWord);
-  speakWordRef.current = speakWord;
-  const playNextRef = useRef<(() => Promise<void>) | null>(null);
-
-  playNextRef.current = async () => {
-    if (!playlistRef.current.length || !isPlayingRef.current) return;
-
-    const idx = currentIndexRef.current;
-    const entry = playlistRef.current[idx];
-    if (!entry) {
-      setIsPlaying(false);
-      isPlayingRef.current = false;
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      for (let rep = 0; rep < settingsRef.current.repetitions; rep++) {
-        if (!isPlayingRef.current) break;
-        await speakWordRef.current(entry);
-        if (rep < settingsRef.current.repetitions - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+  // Main playback loop
+  const runPlaybackLoop = useCallback(async () => {
+    while (isPlayingRef.current) {
+      const idx = currentIndex;
+      const entry = playlist[idx];
+      if (!entry) {
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+        break;
       }
-    } catch (error) {
-      console.error('Error speaking word:', error);
-    } finally {
-      setIsLoading(false);
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setIsLoading(true);
+      try {
+        for (let rep = 0; rep < settings.repetitions; rep++) {
+          if (!isPlayingRef.current || controller.signal.aborted) break;
+          await speakWord(entry, controller.signal);
+          if (!isPlayingRef.current || controller.signal.aborted) break;
+          if (rep < settings.repetitions - 1) {
+            await new Promise(r => setTimeout(r, 800));
+          }
+        }
+      } catch (err) {
+        console.error('Error speaking word:', err);
+      } finally {
+        setIsLoading(false);
+        abortControllerRef.current = null;
+      }
+
+      if (!isPlayingRef.current) break;
+
+      // Pause between words
+      const pauseMs = Math.max(settings.pauseDuration * 1000, 500);
+      await new Promise(r => setTimeout(r, pauseMs));
+      if (!isPlayingRef.current) break;
+
+      // Advance to next word
+      setCurrentIndex(prev => (prev + 1) % playlist.length);
     }
 
-    if (isPlayingRef.current) {
-      playbackTimeoutRef.current = setTimeout(() => {
-        setCurrentIndex(prev => (prev + 1) % playlistRef.current.length);
-        void playNextRef.current?.();
-      }, settingsRef.current.pauseDuration * 1000);
+    // Release wake lock when loop ends
+    releaseWakeLock();
+    // Stop silent audio
+    silentAudioRef.current?.pause();
+
+    const nav = navigator as Navigator & { mediaSession?: MediaSession };
+    if (nav.mediaSession) {
+      nav.mediaSession.playbackState = 'paused';
     }
-  };
+  }, [playlist, currentIndex, settings.repetitions, settings.pauseDuration, speakWord, releaseWakeLock]);
 
   const startPlayback = () => {
     if (playlist.length === 0) return;
+    if (isPlayingRef.current) return;
+
     setIsPlaying(true);
     isPlayingRef.current = true;
-    void playNextRef.current?.();
+
+    // Start silent audio to keep session alive
+    silentAudioRef.current?.play().catch(() => {});
+
+    // Request wake lock
+    void requestWakeLock();
+
+    // Start the loop
+    playLoopPromiseRef.current = runPlaybackLoop();
   };
 
   const pausePlayback = () => {
     setIsPlaying(false);
     isPlayingRef.current = false;
-    if (playbackTimeoutRef.current) {
-      clearTimeout(playbackTimeoutRef.current);
-      playbackTimeoutRef.current = null;
-    }
+
+    // Abort current speech
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+
+    // Stop TTS
     ttsService.stop();
+
+    // Release wake lock
+    releaseWakeLock();
+
+    // Stop silent audio
+    silentAudioRef.current?.pause();
+
+    // Update media session
+    const nav = navigator as Navigator & { mediaSession?: MediaSession };
+    if (nav.mediaSession) {
+      nav.mediaSession.playbackState = 'paused';
+    }
   };
 
   const skipForward = () => {
     if (playlist.length === 0) return;
+    // Abort current speech and advance
+    abortControllerRef.current?.abort();
     setCurrentIndex(prev => (prev + 1) % playlist.length);
   };
 
   const skipBackward = () => {
     if (playlist.length === 0) return;
+    abortControllerRef.current?.abort();
     setCurrentIndex(prev => (prev - 1 + playlist.length) % playlist.length);
   };
 
@@ -188,11 +318,9 @@ export const AudioPlaylist: React.FC = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (playbackTimeoutRef.current) {
-        clearTimeout(playbackTimeoutRef.current);
-      }
-      ttsService.stop();
+      pausePlayback();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateSettings = <K extends keyof AudioPlaylistSettings>(key: K, value: AudioPlaylistSettings[K]) => {
@@ -207,7 +335,7 @@ export const AudioPlaylist: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Volume2 className="h-6 w-6" />
-            Audio Playlist - Passive Learning
+            Audio Playlist — Passive Learning
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -220,7 +348,7 @@ export const AudioPlaylist: React.FC = () => {
                 <div className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto">{currentWord.core.english_definitions[0]}</div>
               )}
               <div className="inline-flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-primary animate-pulse' : 'bg-muted-foreground/40'}`} />
                 HSK {currentWord.source.level} • {currentIndex + 1} of {playlist.length}
               </div>
             </div>
@@ -256,7 +384,7 @@ export const AudioPlaylist: React.FC = () => {
               ) : (
                 <Play className="h-6 w-6" />
               )}
-              {isLoading && (
+              {isLoading && isPlaying && (
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
@@ -316,7 +444,6 @@ export const AudioPlaylist: React.FC = () => {
                         if (checked) {
                           updateSettings('selectedLevels', [...settings.selectedLevels, level]);
                         } else {
-                          // Prevent deselecting if it's the last level
                           if (settings.selectedLevels.length > 1) {
                             updateSettings('selectedLevels', settings.selectedLevels.filter(l => l !== level));
                           }

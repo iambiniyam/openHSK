@@ -318,7 +318,7 @@ class TTSService {
     this.loadVoicesWithRetry();
   }
 
-  private speakUtterance(text: string, signal?: AbortSignal): Promise<void> {
+  private speakUtterance(text: string, signal?: AbortSignal, overrideRate?: number): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.synth) {
         reject(new Error('Speech synthesis not supported'));
@@ -331,7 +331,7 @@ class TTSService {
         utterance.voice = this.preferredVoice;
       }
 
-      utterance.rate = this.rate;
+      utterance.rate = overrideRate ?? this.rate;
       utterance.pitch = 1;
       utterance.volume = 1;
       utterance.lang = 'zh-CN';
@@ -361,12 +361,12 @@ class TTSService {
     });
   }
 
-  private async speakAzure(text: string, signal?: AbortSignal): Promise<void> {
+  private async speakAzure(text: string, signal?: AbortSignal, overrideRate?: number): Promise<void> {
     if (!this.azureConfig) {
       throw new Error('Azure TTS not configured');
     }
 
-    const audio = await synthesizeAzure(text, this.azureConfig, { rate: this.rate });
+    const audio = await synthesizeAzure(text, this.azureConfig, { rate: overrideRate ?? this.rate });
     this._currentAudio = audio;
 
     return new Promise((resolve, reject) => {
@@ -408,19 +408,23 @@ class TTSService {
   }
 
   speak(text: string): Promise<void> {
+    return this.speakWithRate(text, this.rate);
+  }
+
+  speakWithRate(text: string, rate: number): Promise<void> {
     this.stop();
     this._isSpeaking = true;
 
     const doSpeak = async () => {
       if (this.provider === 'azure' && this.azureConfig) {
-        await this.speakAzure(text);
+        await this.speakAzure(text, undefined, rate);
       } else if (this.provider === 'web') {
         await speakWebTts(text, 'zh-CN');
       } else {
         if (!this.synth) {
           throw new Error('Speech synthesis not supported');
         }
-        await this.speakUtterance(text);
+        await this.speakUtterance(text, undefined, rate);
       }
     };
 
