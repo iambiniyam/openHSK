@@ -63,6 +63,7 @@ export const AudioPlaylist: React.FC = () => {
   const silentAudioRef = useRef<HTMLAudioElement | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const playLoopPromiseRef = useRef<Promise<void> | null>(null);
+  const skipRequestedRef = useRef(false);
 
   // Load playlist based on selected levels
   const loadPlaylist = useCallback(() => {
@@ -240,7 +241,11 @@ export const AudioPlaylist: React.FC = () => {
       await new Promise(r => setTimeout(r, pauseMs));
       if (!isPlayingRef.current) break;
 
-      // Advance to next word
+      // Advance to next word (unless skip was requested)
+      if (skipRequestedRef.current) {
+        skipRequestedRef.current = false;
+        continue;
+      }
       setCurrentIndex(prev => (prev + 1) % playlist.length);
     }
 
@@ -299,12 +304,14 @@ export const AudioPlaylist: React.FC = () => {
   const skipForward = () => {
     if (playlist.length === 0) return;
     // Abort current speech and advance
+    skipRequestedRef.current = true;
     abortControllerRef.current?.abort();
     setCurrentIndex(prev => (prev + 1) % playlist.length);
   };
 
   const skipBackward = () => {
     if (playlist.length === 0) return;
+    skipRequestedRef.current = true;
     abortControllerRef.current?.abort();
     setCurrentIndex(prev => (prev - 1 + playlist.length) % playlist.length);
   };

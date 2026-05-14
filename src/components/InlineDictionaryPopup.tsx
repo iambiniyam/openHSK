@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Volume2, BookOpen, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,35 +43,6 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
 
   if (!entry) {
     return (
-      <AnimatePresence>
-        <motion.div
-          ref={popupRef}
-          initial={{ opacity: 0, scale: 0.95, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 8 }}
-          transition={{ duration: 0.15 }}
-          style={{
-            position: 'fixed',
-            left: Math.max(8, Math.min(position.x, window.innerWidth - 272)),
-            top: Math.min(position.y + 20, window.innerHeight - 200),
-            zIndex: 100,
-          }}
-          className="w-64 max-w-[calc(100vw-16px)] bg-card border border-border rounded-xl shadow-xl p-4"
-        >
-          <div className="text-center text-muted-foreground text-sm">
-            <p className="text-lg font-bold text-foreground mb-1">{hanzi}</p>
-            <p>No dictionary entry found</p>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  const hskLevel = entry.hskLevel;
-  const hskLabel = hskLevel ? (hskLevel >= 7 ? 'HSK 7-9' : `HSK ${hskLevel}`) : null;
-
-  return (
-    <AnimatePresence>
       <motion.div
         ref={popupRef}
         initial={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -80,12 +51,38 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
         transition={{ duration: 0.15 }}
         style={{
           position: 'fixed',
-          left: Math.max(8, Math.min(position.x, window.innerWidth - 328)),
-          top: Math.min(position.y + 20, window.innerHeight - 280),
+          left: Math.max(8, Math.min(position.x, window.innerWidth - 272)),
+          top: Math.min(position.y + 20, window.innerHeight - 200),
           zIndex: 100,
         }}
-        className="w-80 max-w-[calc(100vw-16px)] bg-card border border-border rounded-xl shadow-xl overflow-hidden"
+        className="w-64 max-w-[calc(100vw-16px)] bg-card border border-border rounded-xl shadow-xl p-4"
       >
+        <div className="text-center text-muted-foreground text-sm">
+          <p className="text-lg font-bold text-foreground mb-1">{hanzi}</p>
+          <p>No dictionary entry found</p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const hskLevel = entry.hskLevel;
+  const hskLabel = hskLevel ? (hskLevel >= 7 ? 'HSK 7-9' : `HSK ${hskLevel}`) : null;
+
+  return (
+    <motion.div
+      ref={popupRef}
+      initial={{ opacity: 0, scale: 0.95, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 8 }}
+      transition={{ duration: 0.15 }}
+      style={{
+        position: 'fixed',
+        left: Math.max(8, Math.min(position.x, window.innerWidth - 328)),
+        top: Math.min(position.y + 20, window.innerHeight - 280),
+        zIndex: 100,
+      }}
+      className="w-80 max-w-[calc(100vw-16px)] bg-card border border-border rounded-xl shadow-xl overflow-hidden"
+    >
         {/* Header */}
         <div className="p-4 pb-3">
           <div className="flex items-start justify-between">
@@ -147,7 +144,6 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
           )}
         </div>
       </motion.div>
-    </AnimatePresence>
   );
 }
 

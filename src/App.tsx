@@ -278,6 +278,7 @@ function App() {
   const searchCacheRef = useRef<Map<string, UnifiedEntry[]>>(new Map());
   const viewScrollPositionsRef = useRef<Partial<Record<ViewMode, number>>>(initialSession?.scrollPositions || {});
   const previousViewRef = useRef<ViewMode>(initialSession?.currentView || 'landing');
+  const hasProcessedHashRef = useRef(false);
   
   // Stats
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -296,6 +297,15 @@ function App() {
   const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
+
+  // Memoized quiz entries to prevent regeneration on every render
+  const quizEntries = useMemo(() => {
+    if (!dictionaryReady) return [];
+    const rec = hskDataService.getRecommendedEntries(100);
+    return rec
+      .map((hsk) => unifiedDictionary.getEntry(hsk.entry_id))
+      .filter((e): e is UnifiedEntry => Boolean(e));
+  }, [dictionaryReady]);
   
   // Settings
   const [ttsRate, setTtsRate] = useState(initialSession?.ttsRate || 1);
@@ -492,10 +502,17 @@ function App() {
   // Hash-based deep linking — read hash on mount
   // Read hash and restore view-specific state on mount / when data loads
   useEffect(() => {
+    if (hasProcessedHashRef.current) return;
     const hash = window.location.hash.replace('#', '');
-    if (!hash) return;
+    if (!hash) {
+      hasProcessedHashRef.current = true;
+      return;
+    }
     const [view, ...params] = hash.split('/');
-    if (!isViewMode(view)) return;
+    if (!isViewMode(view)) {
+      hasProcessedHashRef.current = true;
+      return;
+    }
 
     // Use a single batch update to avoid multiple re-renders
     const updates: (() => void)[] = [];
@@ -525,7 +542,10 @@ function App() {
     }
 
     // Apply all state updates in a microtask to batch them
-    Promise.resolve().then(() => updates.forEach(fn => fn()));
+    Promise.resolve().then(() => {
+      updates.forEach(fn => fn());
+      hasProcessedHashRef.current = true;
+    });
   }, [dictionaryReady, storyDataset, bookDataset]);
 
   // Listen for browser back/forward hash changes
@@ -570,7 +590,7 @@ function App() {
       viewScrollPositionsRef.current[previousView] = window.scrollY;
     }
 
-    if (currentView !== 'detail' && currentView !== 'study') {
+    if (currentView !== 'detail' && currentView !== 'study' && currentView !== 'stories' && currentView !== 'books') {
       const targetScroll = viewScrollPositionsRef.current[currentView] || 0;
       requestAnimationFrame(() => {
         window.scrollTo({ top: targetScroll, behavior: 'auto' });
@@ -1474,12 +1494,7 @@ function App() {
           </div>
           <Suspense fallback={<SectionLoader label="Preparing quiz mode..." />}>
             <QuizMode
-              entries={(() => {
-                const rec = hskDataService.getRecommendedEntries(100);
-                return rec
-                  .map((hsk) => unifiedDictionary.getEntry(hsk.entry_id))
-                  .filter((e): e is UnifiedEntry => Boolean(e));
-              })()}
+              entries={quizEntries}
               onComplete={() => {
                 hskDataService.incrementQuizzes();
                 refreshStats();
@@ -1868,6 +1883,7 @@ function App() {
           </div>
           <Suspense fallback={<SectionLoader label="Loading book..." />}>
             <BookReader
+              key={book.book_id}
               book={book}
               hasPrevious={currentBookIndex > 0}
               hasNext={currentBookIndex < bookDataset.books.length - 1}
@@ -1978,28 +1994,26 @@ function App() {
               <Volume2 className="w-4 h-4" />
               Audio
             </Button>
-            {storyDataset && (
-              <Button
-                variant={currentView === 'stories' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentView('stories')}
-                className="gap-2"
-              >
-                <ScrollText className="w-4 h-4" />
-                Stories
-              </Button>
-            )}
-            {bookDataset && (
-              <Button
-                variant={currentView === 'books' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentView('books')}
-                className="gap-2"
-              >
-                <Library className="w-4 h-4" />
-                Books
-              </Button>
-            )}
+            <Button
+              variant={currentView === 'stories' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setCurrentView('stories')}
+              className="gap-2"
+              disabled={!storyDataset}
+            >
+              <ScrollText className={`w-4 h-4 ${!storyDataset ? 'opacity-50' : ''}`} />
+              Stories
+            </Button>
+            <Button
+              variant={currentView === 'books' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setCurrentView('books')}
+              className="gap-2"
+              disabled={!bookDataset}
+            >
+              <Library className={`w-4 h-4 ${!bookDataset ? 'opacity-50' : ''}`} />
+              Books
+            </Button>
           </nav>
 
           {/* Actions */}
@@ -2161,15 +2175,15 @@ function App() {
       {/* Mobile Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-50 pb-safe">
         <div className="flex justify-around items-center p-1.5 gap-1 overflow-x-auto">
-          {[
+          {([
             { view: 'landing' as const, label: 'Start', icon: <img src="/brand/logo-mark.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
             { view: 'dashboard' as const, label: 'Home', icon: <img src="/brand/icons/dictionary-stack.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
             { view: 'browse' as const, label: 'Browse', icon: <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
             { view: 'progress' as const, label: 'Progress', icon: <BarChart3 className="w-5 h-5" /> },
             { view: 'audio' as const, label: 'Audio', icon: <Volume2 className="w-5 h-5" /> },
-            ...(storyDataset ? [{ view: 'stories' as const, label: 'Stories', icon: <ScrollText className="w-5 h-5" /> }] : []),
-            ...(bookDataset ? [{ view: 'books' as const, label: 'Books', icon: <Library className="w-5 h-5" /> }] : []),
-          ].map((item) => {
+            { view: 'stories' as const, label: 'Stories', icon: <ScrollText className={`w-5 h-5 ${!storyDataset ? 'opacity-50' : ''}`} />, disabled: !storyDataset },
+            { view: 'books' as const, label: 'Books', icon: <Library className={`w-5 h-5 ${!bookDataset ? 'opacity-50' : ''}`} />, disabled: !bookDataset },
+          ] as Array<{ view: ViewMode; label: string; icon: React.ReactNode; disabled?: boolean }>).map((item) => {
             const active = currentView === item.view;
             return (
               <Button
@@ -2177,11 +2191,12 @@ function App() {
                 variant={active ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setCurrentView(item.view)}
+                disabled={item.disabled}
                 className={`flex-col h-14 min-w-[64px] flex-1 gap-0.5 rounded-xl transition-all duration-200 ${
                   active
                     ? 'bg-primary/10 text-primary shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
+                } ${item.disabled ? 'opacity-60' : ''}`}
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
               >

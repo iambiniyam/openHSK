@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import HanziWriter from 'hanzi-writer';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Eye, EyeOff, PenTool, CheckCircle2 } from 'lucide-react';
+import { Play, RotateCcw, Eye, EyeOff, PenTool, CheckCircle2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,9 @@ export const HanziWriterComponent = ({
       setError(false);
     }, 0);
 
+    // Detect dark mode for stroke colors
+    const isDark = document.documentElement.classList.contains('dark');
+
     // Create HanziWriter instance
     const writer = HanziWriter.create(container, character, {
       width: size,
@@ -49,11 +52,11 @@ export const HanziWriterComponent = ({
       strokeFadeDuration: 400,
       delayBetweenStrokes: 1000 / animationSpeed,
       delayBetweenLoops: 2000,
-      strokeColor: '#333',
-      radicalColor: '#2563eb', // Blue for radical
-      highlightColor: '#60a5fa',
-      outlineColor: '#ddd',
-      drawingColor: '#333',
+      strokeColor: isDark ? '#e2e8f0' : '#333',
+      radicalColor: isDark ? '#60a5fa' : '#2563eb',
+      highlightColor: isDark ? '#93c5fd' : '#60a5fa',
+      outlineColor: isDark ? '#334155' : '#ddd',
+      drawingColor: isDark ? '#e2e8f0' : '#333',
       drawingWidth: 4,
       showHintAfterMisses: 3,
       onLoadCharDataError: () => {
@@ -128,12 +131,6 @@ export const HanziWriterComponent = ({
     setIsAnimating(true);
     setShowCharacter(true);
     writerRef.current.loopCharacterAnimation();
-  };
-
-  const handleStop = () => {
-    if (!writerRef.current) return;
-    // HanziWriter doesn't have cancelAnimation, we just stop tracking
-    setIsAnimating(false);
   };
 
   const handleReset = () => {
@@ -221,15 +218,12 @@ export const HanziWriterComponent = ({
             <Button
               variant="default"
               size="sm"
-              onClick={isAnimating ? handleStop : handleAnimate}
+              onClick={handleAnimate}
+              disabled={isAnimating}
             >
-              {isAnimating ? (
-                <><Pause className="w-4 h-4 mr-1" /> Stop</>
-              ) : (
-                <><Play className="w-4 h-4 mr-1" /> Animate</>
-              )}
+              <Play className="w-4 h-4 mr-1" /> Animate
             </Button>
-            
+
             <Button
               variant="outline"
               size="sm"

@@ -77,11 +77,12 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
       const usedValues = new Set<string>([correctAnswer]);
       const wrongOptions: string[] = [];
 
-      let attempts = 0;
-      while (wrongOptions.length < 3 && attempts < shuffledAll.length * 2) {
+      const checkedIds = new Set<string>([entry.id]);
+      while (wrongOptions.length < 3 && checkedIds.size < shuffledAll.length) {
         const candidate = shuffledAll[poolIndex % shuffledAll.length];
         poolIndex++;
-        attempts++;
+        if (checkedIds.has(candidate.id)) continue;
+        checkedIds.add(candidate.id);
         if (candidate.id === entry.id) continue;
         const value = getOptionValue(candidate, type);
         if (value && !usedValues.has(value)) {
@@ -250,7 +251,7 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
       delay: Math.random() * 1.5,
       color: ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#06b6d4'][Math.floor(Math.random() * 6)],
     })),
-    [quizVersion]
+    []
   );
 
   if (quizComplete) {

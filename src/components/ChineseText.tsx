@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { AnimatePresence } from 'framer-motion';
 
 import { InlineDictionaryPopup } from './InlineDictionaryPopup';
 import { alignPinyinToChars } from '@/lib/pinyinAligner';
@@ -74,14 +75,16 @@ export function ChineseText({
             return rubyElement;
           })}
         </span>
-        {popup && (
-          <InlineDictionaryPopup
-            hanzi={popup.hanzi}
-            position={{ x: popup.x, y: popup.y }}
-            onClose={() => setPopup(null)}
-            onOpenDetail={handlePopupOpenDetail}
-          />
-        )}
+        <AnimatePresence>
+          {popup && (
+            <InlineDictionaryPopup
+              hanzi={popup.hanzi}
+              position={{ x: popup.x, y: popup.y }}
+              onClose={() => setPopup(null)}
+              onOpenDetail={handlePopupOpenDetail}
+            />
+          )}
+        </AnimatePresence>
       </>
     );
   }
@@ -107,14 +110,16 @@ export function ChineseText({
           );
         })}
       </span>
-      {popup && (
-        <InlineDictionaryPopup
-          hanzi={popup.hanzi}
-          position={{ x: popup.x, y: popup.y }}
-          onClose={() => setPopup(null)}
-          onOpenDetail={handlePopupOpenDetail}
-        />
-      )}
+      <AnimatePresence>
+        {popup && (
+          <InlineDictionaryPopup
+            hanzi={popup.hanzi}
+            position={{ x: popup.x, y: popup.y }}
+            onClose={() => setPopup(null)}
+            onOpenDetail={handlePopupOpenDetail}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

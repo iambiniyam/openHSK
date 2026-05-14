@@ -290,7 +290,7 @@ export const WordDetail = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {entry.characterBreakdown.map((char, idx) => (
                   <motion.div
-                    key={char.char}
+                    key={`${char.char}-${idx}`}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.05 }}
@@ -674,9 +674,9 @@ export const WordDetail = ({
                     </div>
                   )}
 
-                  {entry.characterBreakdown.map((char) => (
+                  {entry.characterBreakdown.map((char, idx) => (
                     char.etymology && (
-                      <div key={char.char} className="border rounded-lg p-4">
+                      <div key={`${char.char}-ety-${idx}`} className="border rounded-lg p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <span className="text-3xl font-bold">{char.char}</span>
                           <div>

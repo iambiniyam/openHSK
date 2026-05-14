@@ -7,7 +7,6 @@ import {
   EyeOff,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Hash,
   Globe,
   Pause,
@@ -46,7 +45,6 @@ export const StoryViewer = ({
 }: StoryViewerProps) => {
   const [readerSettings, setReaderSettings] = useState<ReaderSettings>(loadReaderSettings);
   const [showEnglish, setShowEnglish] = useState(false);
-  const [showVocab, setShowVocab] = useState(false);
   const [showVocabList, setShowVocabList] = useState(false);
 
   // TTS read-along state
@@ -233,15 +231,6 @@ export const StoryViewer = ({
               >
                 <Globe className="w-4 h-4 mr-1" />
                 英文
-              </Toggle>
-              <Toggle
-                pressed={showVocab}
-                onPressedChange={setShowVocab}
-                size="sm"
-                aria-label="Toggle vocabulary highlights"
-              >
-                <Sparkles className="w-4 h-4 mr-1" />
-                词汇
               </Toggle>
             </div>
             <div className="flex-1" />
