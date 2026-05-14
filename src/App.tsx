@@ -2257,7 +2257,16 @@ function App() {
                   {currentView === 'detail' && renderDetail()}
                   {currentView === 'study' && renderStudy()}
                   {currentView === 'progress' && renderProgress()}
-                  {currentView === 'audio' && <AudioPlaylist />}
+                  {currentView === 'audio' && (
+                    <AudioPlaylist
+                      onWordClick={(hanzi) => {
+                        const entry = unifiedDictionary.getEntryByHanzi(hanzi);
+                        if (entry) {
+                          openDetailView(entry, { sequence: [entry], returnView: 'audio' });
+                        }
+                      }}
+                    />
+                  )}
                   {currentView === 'stories' && renderStories()}
                   {currentView === 'books' && renderBooks()}
                 </>
