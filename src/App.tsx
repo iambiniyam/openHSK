@@ -1,55 +1,28 @@
-import { Suspense, lazy, useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
+import { lazy, useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  BookOpen, 
   BarChart3, 
-  Search, 
   Brain,
   Settings,
   Sun,
   Moon,
-  Flame,
-  Trophy,
-  Target,
   Volume2,
   Mic,
-  ChevronRight,
   RotateCcw,
-  CheckCircle2,
-  XCircle,
-  GraduationCap,
-  Heart,
-  Timer,
-  Gamepad2,
-  Download,
-  Upload,
-  Filter,
-  X,
-  LayoutGrid,
-  List,
-  GitBranch,
-  Sparkles,
   ScrollText,
   Library,
   AlertTriangle,
-  History,
-  Trash2,
   Headphones,
-  Layers,
   Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 
@@ -59,8 +32,8 @@ import { ttsService, type TtsProvider } from '@/services/ttsService';
 import { scheduleRuntimeWarmup } from '@/lib/runtimeWarmup';
 import { fetchWithCacheFallback } from '@/lib/offlineFetch';
 import type { UserStats } from '@/types/hsk';
-import type { StoryEntry, StoryDataset } from '@/types/stories';
-import type { Book, BookDataset } from '@/types/books';
+import type { StoryDataset } from '@/types/stories';
+import type { BookDataset } from '@/types/books';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { TopProgressBar } from '@/components/TopProgressBar';
@@ -68,6 +41,18 @@ import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import type { ProgressUpdate } from '@/lib/progressiveLoader';
+import { buildDetailSequenceWindow } from '@/lib/detailSequence';
+import {
+  LandingView,
+  DashboardView,
+  BrowseView,
+  DetailView,
+  StudyView,
+  ProgressView,
+  StoriesView,
+  BooksView,
+  SectionLoader,
+} from '@/views';
 
 import './App.css';
 
@@ -78,7 +63,6 @@ export type ProgressTab = 'stats' | 'favorites' | 'grammar' | 'data';
 const APP_SESSION_STORAGE_KEY = 'openhsk.ui-session.v1';
 const MAX_PERSISTED_DETAIL_SEQUENCE = 180;
 const MAX_PERSISTED_STUDY_ENTRIES = 30;
-const MAX_DETAIL_NAV_SEQUENCE = 240;
 
 interface PersistedUiSession {
   version: 1;
@@ -195,54 +179,11 @@ const savePersistedUiSession = (session: PersistedUiSession): void => {
   }
 };
 
-const buildDetailSequenceWindow = (sequence: UnifiedEntry[], selectedId: string): UnifiedEntry[] => {
-  if (sequence.length <= MAX_DETAIL_NAV_SEQUENCE) {
-    return sequence;
-  }
 
-  const selectedIndex = sequence.findIndex((entry) => entry.id === selectedId);
-  if (selectedIndex === -1) {
-    return sequence.slice(0, MAX_DETAIL_NAV_SEQUENCE);
-  }
 
-  const halfWindow = Math.floor(MAX_DETAIL_NAV_SEQUENCE / 2);
-  const start = Math.max(0, selectedIndex - halfWindow);
-  const end = Math.min(sequence.length, start + MAX_DETAIL_NAV_SEQUENCE);
-  const normalizedStart = Math.max(0, end - MAX_DETAIL_NAV_SEQUENCE);
-
-  return sequence.slice(normalizedStart, end);
-};
-
-const LandingPage = lazy(() => import('@/components/LandingPage'));
 const AudioPlaylist = lazy(() => import('@/components/AudioPlaylist').then((m) => ({ default: m.AudioPlaylist })));
-const StoryBrowser = lazy(() => import('@/components/StoryBrowser'));
-const StoryViewer = lazy(() => import('@/components/StoryViewer'));
-const BookBrowser = lazy(() => import('@/components/BookBrowser'));
-const BookReader = lazy(() => import('@/components/BookReader'));
-const VirtualizedWordList = lazy(() => import('@/components/VirtualizedWordList'));
-const PaginatedWordList = lazy(() => import('@/components/PaginatedWordList'));
-const WordDetail = lazy(() => import('@/components/WordDetail'));
-const PomodoroTimer = lazy(() => import('@/components/PomodoroTimer'));
-const QuizMode = lazy(() => import('@/components/QuizMode'));
-const FavoritesList = lazy(() => import('@/components/FavoritesList'));
-const DailyGoals = lazy(() => import('@/components/DailyGoals'));
-const CharacterOfTheDay = lazy(() => import('@/components/CharacterOfTheDay'));
-const GrammarMap = lazy(() => import('@/components/GrammarMap'));
 
-const SectionLoader = ({ label }: { label: string }) => (
-  <Card>
-    <CardContent className="p-6 sm:p-8 text-center">
-      <div className="flex items-center justify-center gap-3 text-muted-foreground">
-        <motion.div
-          className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-        />
-        <span className="text-sm sm:text-base">{label}</span>
-      </div>
-    </CardContent>
-  </Card>
-);
+
 
 function App() {
   const initialSession = useMemo(() => loadPersistedUiSession(), []);
@@ -881,6 +822,50 @@ function App() {
     }
   }, [importData, refreshStats]);
 
+  // Stable callback wrappers for view components
+  const handleNavigateTo = useCallback((view: ViewMode) => setCurrentView(view), []);
+  const handleShowStudyDialog = useCallback(() => setShowStudyDialog(true), []);
+  const handleStartQuiz = useCallback(() => { setShowQuiz(true); setCurrentView('study'); }, []);
+  const handleShowPomodoro = useCallback(() => setShowPomodoro(true), []);
+  const handleShowFeatureGuide = useCallback(() => { dismissWelcomeBanner(); window.dispatchEvent(new CustomEvent('openhsk:show-feature-guide')); }, [dismissWelcomeBanner]);
+  const handleShowImportDialog = useCallback(() => setShowImportDialog(true), []);
+  const handleSetShowPomodoro = useCallback((open: boolean) => setShowPomodoro(open), []);
+
+  const handleSearchQueryChange = useCallback((value: string) => { setSearchQuery(value); setBrowsePage(1); }, []);
+  const handleSearchSubmit = useCallback((trimmed: string) => {
+    setSearchHistory((prev) => {
+      const next = [trimmed, ...prev.filter((s) => s !== trimmed)].slice(0, 20);
+      try { localStorage.setItem('openhsk.search-history.v1', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+  const handleClearSearch = useCallback(() => { setSearchQuery(''); setBrowsePage(1); }, []);
+  const handleSelectedLevelChange = useCallback((value: number | 'all' | '7-9') => { setSelectedLevel(value); setBrowsePage(1); }, []);
+  const handleSelectedPOSChange = useCallback((value: string) => { setSelectedPOS(value); setBrowsePage(1); }, []);
+  const handleListViewModeChange = useCallback((mode: ListViewMode) => setListViewMode(mode), []);
+  const handleSelectHistoryTerm = useCallback((term: string) => { setSearchQuery(term); setBrowsePage(1); }, []);
+  const handleClearHistory = useCallback(() => {
+    setSearchHistory([]);
+    try { localStorage.removeItem('openhsk.search-history.v1'); } catch { /* ignore */ }
+  }, []);
+
+  const handleSetShowAnswer = useCallback((show: boolean) => setShowAnswer(show), []);
+  const handleSetStudyAutoPlay = useCallback((value: boolean | ((prev: boolean) => boolean)) => setStudyAutoPlay(value), []);
+  const handleSetShowQuiz = useCallback((show: boolean) => setShowQuiz(show), []);
+  const handleSetShowStudyComplete = useCallback((show: boolean) => setShowStudyComplete(show), []);
+
+  const handleSetSelectedEntry = useCallback((entry: UnifiedEntry) => setSelectedEntry(entry), []);
+  const handleSetDetailSequence = useCallback((seq: UnifiedEntry[] | ((prev: UnifiedEntry[]) => UnifiedEntry[])) => setDetailSequence(seq), []);
+
+  const handleSetProgressTab = useCallback((tab: ProgressTab) => setProgressTab(tab), []);
+  const handleSetFavorites = useCallback((favs: string[]) => setFavorites(favs), []);
+
+  const handleSetStoryView = useCallback((view: 'browse' | 'reader') => setStoryView(view), []);
+  const handleSetCurrentStoryIndex = useCallback((index: number | ((prev: number) => number)) => setCurrentStoryIndex(index), []);
+
+  const handleSetBookView = useCallback((view: 'browse' | 'reader') => setBookView(view), []);
+  const handleSetCurrentBookIndex = useCallback((index: number | ((prev: number) => number)) => setCurrentBookIndex(index), []);
+
   // Loading screen — shown until user dismisses it or data is ready
   if (showLoadingScreen && !dictionaryReady) {
     return (
@@ -891,1097 +876,6 @@ function App() {
       />
     );
   }
-
-  // Dashboard View
-  const renderDashboard = () => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      {/* Welcome Banner */}
-      <AnimatePresence>
-        {showWelcomeBanner && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10 shrink-0">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm sm:text-base mb-1">
-                      Welcome to OpenHSK!
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-3">
-                      Here's everything you can do to accelerate your Chinese learning.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          dismissWelcomeBanner();
-                          window.dispatchEvent(new CustomEvent('openhsk:show-feature-guide'));
-                        }}
-                      >
-                        <BookOpen className="w-3.5 h-3.5 mr-1.5" />
-                        Explore Features
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          dismissWelcomeBanner();
-                          setShowStudyDialog(true);
-                        }}
-                      >
-                        <Brain className="w-3.5 h-3.5 mr-1.5" />
-                        Start Studying
-                      </Button>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0 -mr-1 -mt-1"
-                    onClick={dismissWelcomeBanner}
-                    aria-label="Dismiss welcome banner"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Hero Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          {
-            icon: Flame,
-            label: 'Day Streak',
-            value: userStats?.currentStreak || 0,
-            toneClass: 'bg-orange-100 dark:bg-orange-900',
-            iconClass: 'text-orange-600 dark:text-orange-400',
-          },
-          {
-            icon: Trophy,
-            label: 'Words Learned',
-            value: userStats?.totalStudied || 0,
-            toneClass: 'bg-blue-100 dark:bg-blue-900',
-            iconClass: 'text-blue-600 dark:text-blue-400',
-          },
-          {
-            icon: Target,
-            label: 'Due for Review',
-            value: dueCount,
-            toneClass: 'bg-green-100 dark:bg-green-900',
-            iconClass: 'text-green-600 dark:text-green-400',
-            onClick: () => setShowStudyDialog(true),
-          },
-          {
-            icon: Heart,
-            label: 'Favorites',
-            value: favorites.length,
-            toneClass: 'bg-red-100 dark:bg-red-900',
-            iconClass: 'text-red-600 dark:text-red-400',
-          },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card
-              className={`hover:shadow-lg transition-all duration-200 ${stat.onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''}`}
-              onClick={stat.onClick}
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`p-3 rounded-xl ${stat.toneClass}`}>
-                  <stat.icon className={`w-6 h-6 ${stat.iconClass}`} />
-                </div>
-                <div>
-                  <div className="text-3xl font-bold">{stat.value}</div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Character of the Day */}
-      <Suspense fallback={<SectionLoader label="Loading your daily character..." />}>
-        <CharacterOfTheDay 
-          onViewDetails={(entry) => openDetailView(entry, { sequence: [entry], returnView: 'dashboard' })}
-        />
-      </Suspense>
-
-      {/* Daily Goals */}
-      <Suspense fallback={<SectionLoader label="Preparing daily goals..." />}>
-        <DailyGoals stats={dailyStats} onUpdateGoals={refreshStats} />
-      </Suspense>
-
-      {/* Quick Actions */}
-      <TooltipProvider delayDuration={400}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[
-            { 
-              icon: Brain, 
-              title: 'Study Session', 
-              desc: dueCount > 0 ? `${dueCount} due for review` : 'Learn new words',
-              tooltip: 'Review due words or learn new ones with spaced repetition (SRS)',
-              toneClass: 'bg-primary/10',
-              iconClass: 'text-primary',
-              onClick: () => setShowStudyDialog(true)
-            },
-            { 
-              icon: Gamepad2, 
-              title: 'Quiz Mode', 
-              desc: 'Test your knowledge',
-              tooltip: 'Multiple-choice questions with 4 types and keyboard shortcuts',
-              toneClass: 'bg-green-100 dark:bg-green-900',
-              iconClass: 'text-green-600 dark:text-green-400',
-              onClick: () => { setShowQuiz(true); setCurrentView('study'); }
-            },
-            { 
-              icon: BookOpen, 
-              title: 'Browse Dictionary', 
-              desc: `${totalWords.toLocaleString()} words`,
-              tooltip: 'Search and explore the full HSK dictionary with enrichments',
-              toneClass: 'bg-slate-100 dark:bg-slate-800',
-              iconClass: 'text-slate-700 dark:text-slate-200',
-              onClick: () => setCurrentView('browse')
-            },
-            { 
-              icon: Timer, 
-              title: 'Focus Timer', 
-              desc: 'Pomodoro session',
-              tooltip: 'Stay focused with timed study sessions (25/5/15 min)',
-              toneClass: 'bg-blue-100 dark:bg-blue-900',
-              iconClass: 'text-blue-600 dark:text-blue-400',
-              onClick: () => setShowPomodoro(true)
-            },
-            {
-              icon: GitBranch,
-              title: 'Grammar Map',
-              desc: 'Track prerequisites',
-              tooltip: 'Interactive grammar dependency graph across HSK levels',
-              toneClass: 'bg-violet-100 dark:bg-violet-900',
-              iconClass: 'text-violet-700 dark:text-violet-300',
-              onClick: () => {
-                setProgressTab('grammar');
-                setCurrentView('progress');
-              },
-            },
-            {
-              icon: Volume2,
-              title: 'Audio Playlist',
-              desc: 'Passive listening',
-              tooltip: 'Listen to HSK vocabulary with text-to-speech',
-              toneClass: 'bg-amber-100 dark:bg-amber-900',
-              iconClass: 'text-amber-600 dark:text-amber-400',
-              onClick: () => setCurrentView('audio'),
-            },
-            {
-              icon: BarChart3,
-              title: 'Progress',
-              desc: 'Stats & favorites',
-              tooltip: 'Track streaks, review schedules, favorites, and export data',
-              toneClass: 'bg-rose-100 dark:bg-rose-900',
-              iconClass: 'text-rose-600 dark:text-rose-400',
-              onClick: () => setCurrentView('progress'),
-            },
-            ...(storyDataset ? [{
-              icon: ScrollText,
-              title: 'Stories',
-              desc: `${storyDataset.meta.total_stories} stories`,
-              tooltip: 'Read AI-generated short stories at your HSK level',
-              toneClass: 'bg-cyan-100 dark:bg-cyan-900',
-              iconClass: 'text-cyan-600 dark:text-cyan-400',
-              onClick: () => setCurrentView('stories'),
-            }] : []),
-            ...(bookDataset ? [{
-              icon: BookOpen,
-              title: 'Books',
-              desc: `${bookDataset.meta.total_books} books`,
-              tooltip: 'Read continuous genre-based stories with chapters',
-              toneClass: 'bg-teal-100 dark:bg-teal-900',
-              iconClass: 'text-teal-600 dark:text-teal-400',
-              onClick: () => setCurrentView('books'),
-            }] : []),
-          ].map((action, i) => (
-            <motion.div
-              key={action.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.08 }}
-            >
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Card 
-                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
-                    onClick={action.onClick}
-                  >
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <div className={`p-4 rounded-2xl group-hover:scale-110 transition-transform ${action.toneClass}`}>
-                        <action.icon className={`w-8 h-8 ${action.iconClass}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold break-words">{action.title}</h3>
-                        <p className="text-sm text-muted-foreground break-words">{action.desc}</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform shrink-0" />
-                    </CardContent>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[240px] text-center">
-                  <p>{action.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-            </motion.div>
-          ))}
-        </div>
-      </TooltipProvider>
-
-      {/* HSK Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <GraduationCap className="w-5 h-5" />
-            HSK Level Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {hskStats.filter(s => s.level !== 0).map(({ level, count, label }) => {
-              const progressKey = String(level);
-              const progress = userStats?.levelProgress[progressKey];
-              const studied = progress?.studied || 0;
-              const percentage = count > 0 ? (studied / count) * 100 : 0;
-              
-              return (
-                <div key={level} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium flex items-center gap-2">
-                      <Badge variant="outline" className={`hsk-badge-${level === '7-9' ? '7' : level}`}>
-                        {label}
-                      </Badge>
-                    </span>
-                    <span className="text-muted-foreground">
-                      {studied} / {count} ({Math.round(percentage)}%)
-                    </span>
-                  </div>
-                  <Progress value={percentage} className="h-2" />
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pomodoro Dialog */}
-      <Dialog open={showPomodoro} onOpenChange={setShowPomodoro}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Timer className="w-5 h-5" />
-              Focus Timer
-            </DialogTitle>
-          </DialogHeader>
-          <Suspense fallback={<SectionLoader label="Loading focus timer..." />}>
-            <PomodoroTimer 
-              onSessionComplete={(mode, duration) => {
-                if (mode === 'focus') {
-                  hskDataService.incrementStudyTime(Math.round(duration / 60));
-                  refreshStats();
-                }
-              }}
-            />
-          </Suspense>
-        </DialogContent>
-      </Dialog>
-    </motion.div>
-  );
-
-  // Landing View
-  const renderLanding = () => (
-    <Suspense fallback={<SectionLoader label="Preparing your learning space..." />}>
-      <LandingPage
-        totalWords={totalWords}
-        onStartLearning={() => setCurrentView('dashboard')}
-        onBrowseDictionary={() => setCurrentView('browse')}
-      />
-    </Suspense>
-  );
-
-  // Browse View
-  const renderBrowse = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-3 sm:space-y-4"
-    >
-      {/* Search Bar */}
-      <Card className="sticky top-0 z-10 shadow-md">
-        <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-              <Input
-                placeholder="Search character, pinyin, meaning..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setBrowsePage(1);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchQuery.trim()) {
-                    const trimmed = searchQuery.trim();
-                    setSearchHistory((prev) => {
-                      const next = [trimmed, ...prev.filter((s) => s !== trimmed)].slice(0, 20);
-                      try {
-                        localStorage.setItem('openhsk.search-history.v1', JSON.stringify(next));
-                      } catch { /* ignore */ }
-                      return next;
-                    });
-                  }
-                }}
-                className="pl-9 sm:pl-10 h-10 sm:h-12 text-base sm:text-lg"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Clear search"
-                  className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setBrowsePage(1);
-                  }}
-                >
-                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-              )}
-            </div>
-
-            {/* Search History */}
-            {searchHistory.length > 0 && !searchQuery && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <History className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                {searchHistory.slice(0, 8).map((term) => (
-                  <button
-                    key={term}
-                    onClick={() => {
-                      setSearchQuery(term);
-                      setBrowsePage(1);
-                    }}
-                    className="text-xs px-2 py-1 rounded-full bg-muted hover:bg-muted/80 transition-colors text-muted-foreground"
-                  >
-                    {term}
-                  </button>
-                ))}
-                <button
-                  onClick={() => {
-                    setSearchHistory([]);
-                    try { localStorage.removeItem('openhsk.search-history.v1'); } catch { /* ignore */ }
-                  }}
-                  className="text-xs text-muted-foreground hover:text-destructive transition-colors ml-auto"
-                  title="Clear history"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            
-            {/* Filters */}
-            <div className="flex gap-2">
-              <Select 
-                value={selectedLevel.toString()} 
-                onValueChange={(v) => {
-                  if (v === 'all') setSelectedLevel('all');
-                  else if (v === '7-9') setSelectedLevel('7-9');
-                  else setSelectedLevel(parseInt(v));
-                  setBrowsePage(1);
-                }}
-              >
-                <SelectTrigger className="w-[100px] sm:w-[120px] h-10 sm:h-12">
-                  <Filter className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  <SelectValue placeholder="Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {[1, 2, 3, 4, 5, 6].map(l => (
-                    <SelectItem key={l} value={l.toString()}>HSK {l}</SelectItem>
-                  ))}
-                  <SelectItem value="7-9">HSK 7-9</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select
-                value={selectedPOS}
-                onValueChange={(value) => {
-                  setSelectedPOS(value);
-                  setBrowsePage(1);
-                }}
-              >
-                <SelectTrigger className="w-[110px] sm:w-[140px] h-10 sm:h-12">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="noun">Noun</SelectItem>
-                  <SelectItem value="verb">Verb</SelectItem>
-                  <SelectItem value="adjective">Adj</SelectItem>
-                  <SelectItem value="adverb">Adv</SelectItem>
-                  <SelectItem value="pronoun">Pronoun</SelectItem>
-                  <SelectItem value="measure word">Measure</SelectItem>
-                  <SelectItem value="particle">Particle</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {/* View Mode Toggle & Stats */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-              {isPending || searchQuery !== deferredSearchQuery ? (
-                <span className="flex items-center gap-2">
-                  <motion.div 
-                    className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  />
-                  Searching...
-                </span>
-              ) : `${searchResults.length.toLocaleString()} words found`}
-            </div>
-            
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={listViewMode === 'paginated' ? 'secondary' : 'ghost'}
-                      size="icon"
-                      aria-label="Grid view"
-                      className="h-7 w-7 sm:h-8 sm:w-8"
-                      onClick={() => setListViewMode('paginated')}
-                    >
-                      <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Grid View (Paginated)</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={listViewMode === 'virtualized' ? 'secondary' : 'ghost'}
-                      size="icon"
-                      aria-label="List view"
-                      className="h-7 w-7 sm:h-8 sm:w-8"
-                      onClick={() => setListViewMode('virtualized')}
-                    >
-                      <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>List View (Virtualized)</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results - Paginated or Virtualized */}
-      <Suspense fallback={<SectionLoader label="Rendering word list..." />}>
-        {listViewMode === 'paginated' ? (
-          <PaginatedWordList
-            entries={searchResults}
-            favoriteIds={favorites}
-            onEntryClick={(entry) => openDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
-            onToggleFavorite={toggleFavorite}
-            itemsPerPage={48}
-            currentPage={browsePage}
-            onPageChange={setBrowsePage}
-            highlightQuery={deferredSearchQuery}
-          />
-        ) : (
-          <VirtualizedWordList
-            entries={searchResults}
-            favoriteIds={favorites}
-            onEntryClick={(entry) => openDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
-            onToggleFavorite={toggleFavorite}
-            highlightQuery={deferredSearchQuery}
-          />
-        )}
-      </Suspense>
-    </motion.div>
-  );
-
-  // Detail View
-  const renderDetail = () => {
-    if (!selectedEntry) return null;
-
-    const sequence = detailSequence.length > 0 ? detailSequence : [selectedEntry];
-    const currentIndex = sequence.findIndex((item) => item.id === selectedEntry.id);
-    const canGoPrevious = currentIndex > 0;
-    const canGoNext = currentIndex >= 0 && currentIndex < sequence.length - 1;
-
-    const backLabel =
-      detailReturnView === 'dashboard'
-        ? 'Dashboard'
-        : detailReturnView === 'progress'
-          ? 'Progress'
-          : detailReturnView === 'study'
-              ? 'Study'
-              : detailReturnView === 'landing'
-                ? 'Home'
-                : 'Browse';
-
-    const navigateDetailByOffset = (offset: -1 | 1) => {
-      const next = sequence[currentIndex + offset];
-      if (!next) return;
-      setSelectedEntry(next);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-    
-    return (
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="space-y-4"
-      >
-        <Button 
-          variant="ghost" 
-          onClick={() => setCurrentView(detailReturnView)}
-          className="mb-2"
-        >
-          ← Back to {backLabel}
-        </Button>
-        
-        <Suspense fallback={<SectionLoader label="Loading word details..." />}>
-          <WordDetail
-            key={selectedEntry.id}
-            entry={selectedEntry}
-            isFavorite={favorites.includes(selectedEntry.id)}
-            onToggleFavorite={() => toggleFavorite(selectedEntry.id)}
-            onRelatedWordClick={(entry) => {
-              setSelectedEntry(entry);
-              setDetailSequence((previous) => {
-                if (previous.some((item) => item.id === entry.id)) {
-                  return previous;
-                }
-
-                return buildDetailSequenceWindow([...previous, entry], entry.id);
-              });
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            canGoPrevious={canGoPrevious}
-            canGoNext={canGoNext}
-            onGoPrevious={() => navigateDetailByOffset(-1)}
-            onGoNext={() => navigateDetailByOffset(1)}
-            navigationLabel={currentIndex >= 0 && sequence.length > 1 ? `${currentIndex + 1} / ${sequence.length}` : undefined}
-          />
-        </Suspense>
-      </motion.div>
-    );
-  };
-
-  // Study View
-  const renderStudy = () => {
-    if (showQuiz) {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => {
-              setShowQuiz(false);
-              setCurrentView('dashboard');
-            }}>
-              ← Exit Quiz
-            </Button>
-          </div>
-          <Suspense fallback={<SectionLoader label="Preparing quiz mode..." />}>
-            <QuizMode
-              entries={quizEntries}
-              onComplete={() => {
-                hskDataService.incrementQuizzes();
-                refreshStats();
-                setTimeout(() => {
-                  setShowQuiz(false);
-                  setCurrentView('dashboard');
-                }, 2000);
-              }}
-              onExit={() => {
-                setShowQuiz(false);
-                setCurrentView('dashboard');
-              }}
-            />
-          </Suspense>
-        </div>
-      );
-    }
-
-    if (showStudyComplete) {
-      return (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-lg mx-auto"
-        >
-          <Card className="p-8 text-center space-y-6">
-            <div className="flex justify-center">
-              <div className="p-4 bg-primary/10 rounded-full">
-                <Trophy className="w-12 h-12 text-primary" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Session Complete!</h2>
-              <p className="text-muted-foreground">
-                You reviewed {studyEntries.length} words. Great work!
-              </p>
-            </div>
-            <div className="flex gap-2 justify-center">
-              <Button onClick={() => {
-                setShowStudyComplete(false);
-                startStudySession(studyEntries.length);
-              }}>
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Study Again
-              </Button>
-              <Button variant="outline" onClick={() => {
-                setShowStudyComplete(false);
-                setCurrentView('dashboard');
-              }}>
-                Back to Dashboard
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-      );
-    }
-
-    const currentEntry = studyEntries[currentStudyIndex];
-    if (!currentEntry) return null;
-
-    return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => setCurrentView('dashboard')}>
-            ← Exit Session
-          </Button>
-          <div className="text-sm text-muted-foreground">
-            {currentStudyIndex + 1} / {studyEntries.length}
-          </div>
-        </div>
-
-        <Progress value={(currentStudyIndex / studyEntries.length) * 100} className="h-2" />
-
-        <Card className="p-8">
-          <div className="text-center space-y-6">
-            <div className="space-y-2">
-              <div className="text-5xl sm:text-7xl font-bold">{currentEntry.hanzi}</div>
-              <div className="text-2xl text-muted-foreground">{currentEntry.pinyin}</div>
-            </div>
-            
-            <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => ttsService.speak(currentEntry.hanzi)}>
-                <Volume2 className="w-4 h-4 mr-2" />
-                Listen
-              </Button>
-              <Button
-                variant={studyAutoPlay ? 'secondary' : 'ghost'}
-                size="sm"
-                className="gap-1 text-xs"
-                onClick={() => {
-                  setStudyAutoPlay(prev => {
-                    const next = !prev;
-                    try { localStorage.setItem('openhsk.study-autoplay.v1', String(next)); } catch { /* ignore */ }
-                    return next;
-                  });
-                }}
-              >
-                <Headphones className="w-3.5 h-3.5" />
-                Auto
-              </Button>
-            </div>
-
-            <AnimatePresence>
-              {showAnswer && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4 pt-4 border-t"
-                >
-                  <div>
-                    <div className="font-medium text-lg mb-2">Meanings:</div>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {currentEntry.definitions.map((def, i) => (
-                        <Badge key={i} variant="secondary" className="text-base whitespace-normal break-words max-w-full">{def}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {currentEntry.examples.length > 0 && (
-                    <div className="bg-muted p-4 rounded-lg">
-                      <div className="font-medium mb-1">Example:</div>
-                      <div className="text-lg break-words">{currentEntry.examples[0].chinese}</div>
-                      <div className="text-sm text-muted-foreground break-words">{currentEntry.examples[0].pinyin}</div>
-                      <div className="text-sm text-muted-foreground break-words">{currentEntry.examples[0].english}</div>
-                    </div>
-                  )}
-
-                  {/* Character Breakdown */}
-                  {currentEntry.characterBreakdown && currentEntry.characterBreakdown.length > 1 && (
-                    <div className="bg-primary/[0.03] border border-primary/10 p-4 rounded-lg">
-                      <div className="font-medium text-sm mb-2 flex items-center gap-1.5 text-primary/80">
-                        <Layers className="w-3.5 h-3.5" />
-                        Character Breakdown
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {currentEntry.characterBreakdown.map((char) => (
-                          <div key={char.char} className="flex flex-col items-center gap-1 px-3 py-2 bg-background rounded-lg border border-border/50 min-w-[60px]">
-                            <span className="text-xl font-bold">{char.char}</span>
-                            <span className="text-xs text-muted-foreground">{char.pinyin}</span>
-                            {char.definition && (
-                              <span className="text-[10px] text-muted-foreground text-center leading-tight max-w-[80px]">{char.definition}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-2 justify-center pt-4">
-                    <Button variant="destructive" onClick={() => handleStudyResult(1)} className="flex-1 min-w-[100px]">
-                      <XCircle className="w-4 h-4 mr-1.5" />
-                      Again <span className="ml-1 opacity-70 text-xs">(1)</span>
-                    </Button>
-                    <Button variant="outline" onClick={() => handleStudyResult(2)} className="flex-1 min-w-[100px] border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10">
-                      Hard <span className="ml-1 opacity-70 text-xs">(2)</span>
-                    </Button>
-                    <Button variant="default" onClick={() => handleStudyResult(3)} className="flex-1 min-w-[100px]">
-                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                      Good <span className="ml-1 opacity-70 text-xs">(3)</span>
-                    </Button>
-                    <Button variant="secondary" onClick={() => handleStudyResult(4)} className="flex-1 min-w-[100px] bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60">
-                      Easy <span className="ml-1 opacity-70 text-xs">(4)</span>
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {!showAnswer && (
-              <Button className="w-full" size="lg" onClick={() => setShowAnswer(true)}>
-                Show Answer <span className="ml-2 opacity-60 text-sm">(Space)</span>
-              </Button>
-            )}
-          </div>
-        </Card>
-      </div>
-    );
-  };
-
-  // Progress View
-  const renderProgress = () => (
-    <Tabs value={progressTab} onValueChange={(value) => setProgressTab(value as ProgressTab)} className="space-y-4">
-      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-        <TabsTrigger value="stats">Statistics</TabsTrigger>
-        <TabsTrigger value="favorites">Favorites</TabsTrigger>
-        <TabsTrigger value="grammar">Grammar</TabsTrigger>
-        <TabsTrigger value="data">Data</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="stats" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Study Statistics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Total Words', value: userStats?.totalStudied || 0 },
-                { label: 'Current Streak', value: userStats?.currentStreak || 0 },
-                { label: 'Longest Streak', value: userStats?.longestStreak || 0 },
-                { label: 'Due for Review', value: dueCount },
-              ].map(stat => (
-                <div key={stat.label} className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-3xl font-bold">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Level Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {hskStats.filter(s => s.level !== 0).map(({ level, count, label }) => {
-                const progressKey = String(level);
-                const progress = userStats?.levelProgress[progressKey];
-                const studied = progress?.studied || 0;
-                const percentage = count > 0 ? Math.round((studied / count) * 100) : 0;
-                const levelColors: Record<number, string> = {
-                  1: 'bg-green-500',
-                  2: 'bg-emerald-500',
-                  3: 'bg-blue-500',
-                  4: 'bg-purple-500',
-                  5: 'bg-orange-500',
-                  6: 'bg-red-500',
-                };
-                const levelNum = level as number;
-                
-                return (
-                  <div key={level} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 group">
-                    <div className="sm:w-20 font-medium text-sm flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${levelColors[levelNum] || 'bg-gray-400'}`} />
-                      {label}
-                    </div>
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
-                        <motion.div
-                          className={`h-full rounded-full ${levelColors[levelNum] || 'bg-gray-400'}`}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percentage}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
-                        />
-                      </div>
-                      <div className="text-right text-sm tabular-nums shrink-0 min-w-[4rem]">
-                        <span className="font-medium">{percentage}%</span>
-                        <span className="text-muted-foreground text-xs ml-1">({studied}/{count})</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="favorites">
-        <Suspense fallback={<SectionLoader label="Loading favorites..." />}>
-          <FavoritesList
-            entries={entries}
-            favoriteIds={favorites}
-            onRemoveFavorite={(id) => {
-              hskDataService.removeFromFavorites(id);
-              setFavorites(hskDataService.getFavorites());
-            }}
-            onEntryClick={(entry) => {
-              const favoriteEntries = entries.filter((item) => favorites.includes(item.id));
-              openDetailView(entry, { sequence: favoriteEntries, returnView: 'progress' });
-            }}
-            onClearAll={() => {
-              hskDataService.clearFavorites();
-              setFavorites([]);
-            }}
-          />
-        </Suspense>
-      </TabsContent>
-
-      <TabsContent value="grammar">
-        <Suspense fallback={<SectionLoader label="Loading grammar map..." />}>
-          <GrammarMap userStats={userStats} />
-        </Suspense>
-      </TabsContent>
-
-      <TabsContent value="data" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Export / Import Data</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Button onClick={handleExport}>
-                <Download className="w-4 h-4 mr-2" />
-                Export Data
-              </Button>
-              <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Import Data
-              </Button>
-            </div>
-
-            {exportData && (
-              <div className="space-y-2">
-                <Label>Export JSON (copy and save):</Label>
-                <Textarea value={exportData} readOnly className="font-mono text-xs h-32" />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-center">
-          <Button variant="destructive" onClick={() => {
-            if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
-              hskDataService.resetProgress();
-              refreshStats();
-              setFavorites([]);
-            }
-          }}>
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Reset All Progress
-          </Button>
-        </div>
-      </TabsContent>
-    </Tabs>
-  );
-
-  // Stories View
-  const renderStories = () => {
-    if (!storyDataset) {
-      return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <SectionLoader label="Loading story dataset..." />
-        </motion.div>
-      );
-    }
-
-    if (storyView === 'reader' && storyDataset) {
-      const story = storyDataset.stories[currentStoryIndex];
-      if (!story) return null;
-
-      const handleWordClick = (hanzi: string) => {
-        const entry = unifiedDictionary.getEntryByHanzi(hanzi);
-        if (entry) {
-          openDetailView(entry, { sequence: [entry], returnView: 'stories' });
-        }
-      };
-
-      return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setStoryView('browse')}>
-              ← Back to Stories
-            </Button>
-          </div>
-          <Suspense fallback={<SectionLoader label="Loading story..." />}>
-            <StoryViewer
-              story={story}
-              hasPrevious={currentStoryIndex > 0}
-              hasNext={currentStoryIndex < storyDataset.stories.length - 1}
-              storyIndex={currentStoryIndex}
-              totalStories={storyDataset.stories.length}
-              onWordClick={handleWordClick}
-              onPrevious={() => setCurrentStoryIndex((i) => Math.max(0, i - 1))}
-              onNext={() =>
-                setCurrentStoryIndex((i) =>
-                  Math.min(storyDataset.stories.length - 1, i + 1)
-                )
-              }
-            />
-          </Suspense>
-        </motion.div>
-      );
-    }
-
-    const handleStorySelect = (_story: StoryEntry, index: number) => {
-      setCurrentStoryIndex(index);
-      setStoryView('reader');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <Suspense fallback={<SectionLoader label="Loading story browser..." />}>
-          <StoryBrowser
-            stories={storyDataset.stories}
-            meta={storyDataset.meta}
-            onStorySelect={handleStorySelect}
-          />
-        </Suspense>
-      </motion.div>
-    );
-  };
-
-  // Books View
-  const renderBooks = () => {
-    if (!bookDataset) {
-      return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <SectionLoader label="Loading book dataset..." />
-        </motion.div>
-      );
-    }
-
-    if (bookView === 'reader' && bookDataset) {
-      const book = bookDataset.books[currentBookIndex];
-      if (!book) return null;
-
-      const handleWordClick = (hanzi: string) => {
-        const entry = unifiedDictionary.getEntryByHanzi(hanzi);
-        if (entry) {
-          openDetailView(entry, { sequence: [entry], returnView: 'books' });
-        }
-      };
-
-      return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setBookView('browse')}>
-              ← Back to Books
-            </Button>
-          </div>
-          <Suspense fallback={<SectionLoader label="Loading book..." />}>
-            <BookReader
-              key={book.book_id}
-              book={book}
-              hasPrevious={currentBookIndex > 0}
-              hasNext={currentBookIndex < bookDataset.books.length - 1}
-              bookIndex={currentBookIndex}
-              totalBooks={bookDataset.books.length}
-              onWordClick={handleWordClick}
-              onPrevious={() => setCurrentBookIndex((i) => Math.max(0, i - 1))}
-              onNext={() =>
-                setCurrentBookIndex((i) =>
-                  Math.min(bookDataset.books.length - 1, i + 1)
-                )
-              }
-            />
-          </Suspense>
-        </motion.div>
-      );
-    }
-
-    const handleBookSelect = (_book: Book, index: number) => {
-      setCurrentBookIndex(index);
-      setBookView('reader');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <Suspense fallback={<SectionLoader label="Loading book browser..." />}>
-          <BookBrowser
-            books={bookDataset.books}
-            meta={bookDataset.meta}
-            onBookSelect={handleBookSelect}
-          />
-        </Suspense>
-      </motion.div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-background brand-atmosphere">
@@ -2291,7 +1185,7 @@ function App() {
               transition={{ duration: 0.15 }}
             >
               {currentView === 'landing' ? (
-                renderLanding()
+                <LandingView totalWords={totalWords} onStartLearning={() => setCurrentView('dashboard')} onBrowseDictionary={() => setCurrentView('browse')} />
               ) : initError ? (
                 <Card className="max-w-md mx-auto mt-12">
                   <CardContent className="p-8 text-center space-y-4">
@@ -2314,14 +1208,106 @@ function App() {
                 <SectionLoader label="Preparing your HSK data for this section..." />
               ) : (
                 <>
-                  {currentView === 'dashboard' && renderDashboard()}
-                  {currentView === 'browse' && renderBrowse()}
-                  {currentView === 'detail' && renderDetail()}
-                  {currentView === 'study' && renderStudy()}
-                  {currentView === 'progress' && renderProgress()}
+                  {currentView === 'dashboard' && (
+                    <DashboardView
+                      showWelcomeBanner={showWelcomeBanner}
+                      userStats={userStats}
+                      dueCount={dueCount}
+                      totalWords={totalWords}
+                      favorites={favorites}
+                      hskStats={hskStats}
+                      dailyStats={dailyStats}
+                      storyDataset={storyDataset}
+                      bookDataset={bookDataset}
+                      showPomodoro={showPomodoro}
+                      onDismissWelcomeBanner={dismissWelcomeBanner}
+                      onShowFeatureGuide={handleShowFeatureGuide}
+                      onShowStudyDialog={handleShowStudyDialog}
+                      onStartQuiz={handleStartQuiz}
+                      onNavigateTo={handleNavigateTo}
+                      onShowPomodoro={handleShowPomodoro}
+                      onSetProgressTab={handleSetProgressTab}
+                      onOpenDetailView={openDetailView}
+                      onRefreshStats={refreshStats}
+                      onSetShowPomodoro={handleSetShowPomodoro}
+                    />
+                  )}
+                  {currentView === 'browse' && (
+                    <BrowseView
+                      searchQuery={searchQuery}
+                      onSearchQueryChange={handleSearchQueryChange}
+                      onSearchSubmit={handleSearchSubmit}
+                      onClearSearch={handleClearSearch}
+                      selectedLevel={selectedLevel}
+                      onSelectedLevelChange={handleSelectedLevelChange}
+                      selectedPOS={selectedPOS}
+                      onSelectedPOSChange={handleSelectedPOSChange}
+                      searchResults={searchResults}
+                      favorites={favorites}
+                      onToggleFavorite={toggleFavorite}
+                      listViewMode={listViewMode}
+                      onListViewModeChange={handleListViewModeChange}
+                      browsePage={browsePage}
+                      onBrowsePageChange={setBrowsePage}
+                      deferredSearchQuery={deferredSearchQuery}
+                      isPending={isPending}
+                      searchHistory={searchHistory}
+                      onSelectHistoryTerm={handleSelectHistoryTerm}
+                      onClearHistory={handleClearHistory}
+                      onOpenDetailView={openDetailView}
+                    />
+                  )}
+                  {currentView === 'detail' && selectedEntry && (
+                    <DetailView
+                      selectedEntry={selectedEntry}
+                      detailSequence={detailSequence}
+                      detailReturnView={detailReturnView}
+                      favorites={favorites}
+                      onToggleFavorite={toggleFavorite}
+                      onSetSelectedEntry={handleSetSelectedEntry}
+                      onSetDetailSequence={handleSetDetailSequence}
+                      onSetCurrentView={handleNavigateTo}
+                    />
+                  )}
+                  {currentView === 'study' && (
+                    <StudyView
+                      studyEntries={studyEntries}
+                      currentStudyIndex={currentStudyIndex}
+                      showAnswer={showAnswer}
+                      showQuiz={showQuiz}
+                      showStudyComplete={showStudyComplete}
+                      studyAutoPlay={studyAutoPlay}
+                      quizEntries={quizEntries}
+                      onSetShowAnswer={handleSetShowAnswer}
+                      onSetStudyAutoPlay={handleSetStudyAutoPlay}
+                      onHandleStudyResult={handleStudyResult}
+                      onSetShowQuiz={handleSetShowQuiz}
+                      onSetShowStudyComplete={handleSetShowStudyComplete}
+                      onSetCurrentView={handleNavigateTo}
+                      onStartStudySession={startStudySession}
+                      onRefreshStats={refreshStats}
+                    />
+                  )}
+                  {currentView === 'progress' && (
+                    <ProgressView
+                      progressTab={progressTab}
+                      onSetProgressTab={handleSetProgressTab}
+                      userStats={userStats}
+                      dueCount={dueCount}
+                      hskStats={hskStats}
+                      entries={entries}
+                      favorites={favorites}
+                      exportData={exportData}
+                      onHandleExport={handleExport}
+                      onShowImportDialog={handleShowImportDialog}
+                      onRefreshStats={refreshStats}
+                      onSetFavorites={handleSetFavorites}
+                      onOpenDetailView={openDetailView}
+                    />
+                  )}
                   {currentView === 'audio' && (
                     <AudioPlaylist
-                      onWordClick={(hanzi) => {
+                      onWordClick={(hanzi: string) => {
                         const entry = unifiedDictionary.getEntryByHanzi(hanzi);
                         if (entry) {
                           openDetailView(entry, { sequence: [entry], returnView: 'audio' });
@@ -2329,8 +1315,26 @@ function App() {
                       }}
                     />
                   )}
-                  {currentView === 'stories' && renderStories()}
-                  {currentView === 'books' && renderBooks()}
+                  {currentView === 'stories' && (
+                    <StoriesView
+                      storyDataset={storyDataset}
+                      storyView={storyView}
+                      currentStoryIndex={currentStoryIndex}
+                      onSetStoryView={handleSetStoryView}
+                      onSetCurrentStoryIndex={handleSetCurrentStoryIndex}
+                      onOpenDetailView={openDetailView}
+                    />
+                  )}
+                  {currentView === 'books' && (
+                    <BooksView
+                      bookDataset={bookDataset}
+                      bookView={bookView}
+                      currentBookIndex={currentBookIndex}
+                      onSetBookView={handleSetBookView}
+                      onSetCurrentBookIndex={handleSetCurrentBookIndex}
+                      onOpenDetailView={openDetailView}
+                    />
+                  )}
                 </>
               )}
             </motion.div>
