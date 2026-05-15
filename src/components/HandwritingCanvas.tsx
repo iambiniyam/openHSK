@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Eraser, Undo, Check, X } from 'lucide-react';
 
@@ -15,6 +16,7 @@ export const HandwritingCanvas = ({ character, size = 200, onComplete }: Handwri
   const [currentStroke, setCurrentStroke] = useState<{ x: number; y: number }[]>([]);
   const [showGuide, setShowGuide] = useState(true);
   const [feedback, setFeedback] = useState<'none' | 'correct' | 'incorrect'>('none');
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     ctx.strokeStyle = 'hsl(var(--muted-foreground) / 0.2)';
@@ -165,8 +167,15 @@ export const HandwritingCanvas = ({ character, size = 200, onComplete }: Handwri
       onComplete(hasDrawing ? 80 : 20);
     }
     
-    setTimeout(() => setFeedback('none'), 2000);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = setTimeout(() => setFeedback('none'), 2000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;

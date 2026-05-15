@@ -121,6 +121,8 @@ class UnifiedDictionaryService {
   private loaded = false;
   private loadPromise: Promise<void> | null = null;
   private loadAbortController: AbortController | null = null;
+  private searchCache = new Map<string, SearchResult[]>();
+  private readonly SEARCH_CACHE_MAX_SIZE = 50;
 
   async initialize(): Promise<void> {
     if (this.loaded) return;
@@ -606,6 +608,11 @@ class UnifiedDictionaryService {
     const { hskLevel, partOfSpeech, maxResults } = options;
     const normalizedQuery = query.toLowerCase().trim();
     const shouldLimit = typeof maxResults === 'number' && Number.isFinite(maxResults);
+
+    // Cache key includes query + all filters
+    const cacheKey = `${normalizedQuery}::${hskLevel ?? 'all'}::${partOfSpeech ?? 'all'}::${maxResults ?? 'all'}`;
+    const cached = this.searchCache.get(cacheKey);
+    if (cached) return cached;
     
     // Get all entries first
     let allEntries = Array.from(this.entries.values());
@@ -630,7 +637,9 @@ class UnifiedDictionaryService {
         .sort((a, b) => (a.hskLevel || 99) - (b.hskLevel || 99))
         .map(e => ({ entry: e, matchType: 'exact' as const, matchScore: 1 }));
 
-      return shouldLimit ? sorted.slice(0, maxResults) : sorted;
+      const result = shouldLimit ? sorted.slice(0, maxResults) : sorted;
+      this.setSearchCache(cacheKey, result);
+      return result;
     }
     
     const results = new Map<string, SearchResult>();
@@ -683,7 +692,19 @@ class UnifiedDictionaryService {
     const sortedResults = Array.from(results.values())
       .sort((a, b) => b.matchScore - a.matchScore);
 
-    return shouldLimit ? sortedResults.slice(0, maxResults) : sortedResults;
+    const result = shouldLimit ? sortedResults.slice(0, maxResults) : sortedResults;
+    this.setSearchCache(cacheKey, result);
+    return result;
+  }
+
+  private setSearchCache(key: string, results: SearchResult[]): void {
+    if (this.searchCache.size >= this.SEARCH_CACHE_MAX_SIZE) {
+      const firstKey = this.searchCache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.searchCache.delete(firstKey);
+      }
+    }
+    this.searchCache.set(key, results);
   }
 
   private entryInList(entry: UnifiedEntry, list: UnifiedEntry[]): boolean {

@@ -44,6 +44,7 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
     try { return localStorage.getItem('openhsk.quiz-autoplay.v1') === 'true'; } catch { return false; }
   });
   const scoreRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const generateQuestions = useCallback((entries: UnifiedEntry[], version: number): Question[] => {
     void version;
@@ -124,10 +125,12 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
         return next;
       });
       setScoreFlash(true);
-      setTimeout(() => setScoreFlash(false), 400);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setScoreFlash(false), 400);
     } else {
       setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setIsShaking(false), 500);
     }
   }, [showAnswer, currentQuestion]);
 
@@ -153,6 +156,13 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
       return () => clearTimeout(timer);
     }
   }, [currentQuestion, autoPlayAudio, showAnswer, currentIndex]);
+
+  // Cleanup any pending timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   // Keyboard navigation
   useEffect(() => {
@@ -364,6 +374,7 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
               variant={autoPlayAudio ? 'secondary' : 'ghost'}
               size="sm"
               className="h-8 gap-1 text-xs"
+              aria-label={autoPlayAudio ? 'Disable auto-play audio' : 'Enable auto-play audio'}
               onClick={() => {
                 setAutoPlayAudio(prev => {
                   const next = !prev;
@@ -375,7 +386,7 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
               <Headphones className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Auto</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={playAudio}>
+            <Button variant="ghost" size="icon" aria-label="Play audio" onClick={playAudio}>
               <Volume2 className="w-5 h-5" />
             </Button>
           </div>

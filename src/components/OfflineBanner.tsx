@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { WifiOff, Wifi } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -7,17 +7,19 @@ export function OfflineBanner() {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   const [showBackOnline, setShowBackOnline] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
       setShowBackOnline(true);
-      const timer = setTimeout(() => setShowBackOnline(false), 3000);
-      return () => clearTimeout(timer);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setShowBackOnline(false), 3000);
     };
     const handleOffline = () => {
       setIsOnline(false);
       setShowBackOnline(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
 
     window.addEventListener('online', handleOnline);
@@ -25,6 +27,7 @@ export function OfflineBanner() {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
 

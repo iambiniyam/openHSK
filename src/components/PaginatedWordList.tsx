@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,25 @@ interface PaginatedWordListProps {
   itemsPerPage?: number;
   currentPage?: number;
   onPageChange?: (page: number) => void;
+  highlightQuery?: string;
+}
+
+function highlightMatch(text: string, query: string): ReactNode {
+  if (!query.trim()) return text;
+  const normalizedQuery = query.toLowerCase().trim();
+  const normalizedText = text.toLowerCase();
+  const idx = normalizedText.indexOf(normalizedQuery);
+  if (idx === -1) return text;
+
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-amber-200/60 text-inherit rounded px-0.5">
+        {text.slice(idx, idx + normalizedQuery.length)}
+      </mark>
+      {text.slice(idx + normalizedQuery.length)}
+    </>
+  );
 }
 
 export const PaginatedWordList = ({
@@ -26,6 +45,7 @@ export const PaginatedWordList = ({
   itemsPerPage = 50,
   currentPage,
   onPageChange,
+  highlightQuery,
 }: PaginatedWordListProps) => {
   const [internalPage, setInternalPage] = useState(1);
   const activePage = currentPage ?? internalPage;
@@ -108,13 +128,17 @@ export const PaginatedWordList = ({
                     <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
                       {/* Character */}
                       <div className="flex-shrink-0 min-h-12 min-w-12 sm:min-h-14 sm:min-w-14 max-w-[8.5rem] px-2 sm:px-2.5 py-1.5 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl">
-                        <span className="block text-lg sm:text-xl font-bold leading-tight text-center break-all line-clamp-2">{entry.hanzi}</span>
+                        <span className="block text-lg sm:text-xl font-bold leading-tight text-center break-all line-clamp-2">
+                          {highlightMatch(entry.hanzi, highlightQuery || '')}
+                        </span>
                       </div>
                       
                       {/* Info */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                          <span className="max-w-full text-xs sm:text-sm text-muted-foreground break-words line-clamp-1">{entry.pinyin}</span>
+                          <span className="max-w-full text-xs sm:text-sm text-muted-foreground break-words line-clamp-1">
+                            {highlightMatch(entry.pinyin, highlightQuery || '')}
+                          </span>
                           {entry.hskLevel && (
                             <Badge
                               variant="secondary"
@@ -125,7 +149,7 @@ export const PaginatedWordList = ({
                           )}
                         </div>
                         <div className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-2 break-words">
-                          {entry.definitions.slice(0, 2).join(', ')}
+                          {highlightMatch(entry.definitions.slice(0, 2).join(', '), highlightQuery || '')}
                         </div>
                       </div>
                     </div>
@@ -135,6 +159,7 @@ export const PaginatedWordList = ({
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label={`Listen to ${entry.hanzi}`}
                         className="h-7 w-7 sm:h-8 sm:w-8 opacity-60 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => handleSpeak(e, entry.hanzi)}
                       >
@@ -143,6 +168,7 @@ export const PaginatedWordList = ({
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label={isFav ? `Remove ${entry.hanzi} from favorites` : `Add ${entry.hanzi} to favorites`}
                         className="h-7 w-7 sm:h-8 sm:w-8 opacity-60 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => handleFavorite(e, entry.id)}
                       >

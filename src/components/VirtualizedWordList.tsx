@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo, type ReactNode } from 'react';
 import { List, useListRef } from 'react-window';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ interface VirtualizedWordListProps {
   favoriteIds: string[];
   onEntryClick: (entry: UnifiedEntry) => void;
   onToggleFavorite: (id: string) => void;
+  highlightQuery?: string;
 }
 
 interface RowProps {
@@ -21,6 +22,7 @@ interface RowProps {
   favoriteIdSet: Set<string>;
   onEntryClick: (entry: UnifiedEntry) => void;
   onToggleFavorite: (id: string) => void;
+  highlightQuery?: string;
 }
 
 interface RowComponentProps {
@@ -33,9 +35,27 @@ interface RowComponentProps {
   };
 }
 
+function highlightMatch(text: string, query: string): ReactNode {
+  if (!query.trim()) return text;
+  const normalizedQuery = query.toLowerCase().trim();
+  const normalizedText = text.toLowerCase();
+  const idx = normalizedText.indexOf(normalizedQuery);
+  if (idx === -1) return text;
+
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-amber-200/60 text-inherit rounded px-0.5">
+        {text.slice(idx, idx + normalizedQuery.length)}
+      </mark>
+      {text.slice(idx + normalizedQuery.length)}
+    </>
+  );
+}
+
 // Row component for the list
 const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowProps): ReactElement | null => {
-  const { entries, favoriteIdSet, onEntryClick, onToggleFavorite } = data;
+  const { entries, favoriteIdSet, onEntryClick, onToggleFavorite, highlightQuery } = data;
   const entry = entries[index];
   if (!entry) return null;
   
@@ -60,13 +80,17 @@ const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowP
         <div className="flex items-start gap-2.5 sm:gap-3 h-full">
           {/* Character */}
           <div className="flex-shrink-0 min-h-11 min-w-11 sm:min-h-12 sm:min-w-12 max-w-[7.5rem] px-2 sm:px-2.5 py-1 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl">
-            <span className="block text-base sm:text-lg font-bold leading-tight text-center break-all line-clamp-2">{entry.hanzi}</span>
+            <span className="block text-base sm:text-lg font-bold leading-tight text-center break-all line-clamp-2">
+              {highlightMatch(entry.hanzi, highlightQuery || '')}
+            </span>
           </div>
           
           {/* Info - with proper overflow handling */}
           <div className="flex-1 min-w-0 overflow-hidden pt-0.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs sm:text-sm text-muted-foreground break-words line-clamp-1">{entry.pinyin}</span>
+              <span className="text-xs sm:text-sm text-muted-foreground break-words line-clamp-1">
+                {highlightMatch(entry.pinyin, highlightQuery || '')}
+              </span>
               {entry.hskLevel && (
                 <Badge 
                   variant="secondary" 
@@ -77,7 +101,7 @@ const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowP
               )}
             </div>
             <div className="text-xs sm:text-sm text-muted-foreground line-clamp-1 break-words mt-0.5">
-              {entry.definitions.slice(0, 2).join(', ')}
+              {highlightMatch(entry.definitions.slice(0, 2).join(', '), highlightQuery || '')}
             </div>
             
             {/* Part of speech tags */}
@@ -97,6 +121,7 @@ const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowP
             <Button
               variant="ghost"
               size="icon"
+              aria-label={`Listen to ${entry.hanzi}`}
               className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
               onClick={handleSpeak}
             >
@@ -105,6 +130,7 @@ const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowP
             <Button
               variant="ghost"
               size="icon"
+              aria-label={isFav ? `Remove ${entry.hanzi} from favorites` : `Add ${entry.hanzi} to favorites`}
               className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
               onClick={handleFavorite}
             >
@@ -121,7 +147,8 @@ export const VirtualizedWordList = ({
   entries,
   favoriteIds,
   onEntryClick,
-  onToggleFavorite
+  onToggleFavorite,
+  highlightQuery,
 }: VirtualizedWordListProps) => {
     const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
@@ -175,7 +202,8 @@ export const VirtualizedWordList = ({
     entries,
     favoriteIdSet,
     onEntryClick,
-    onToggleFavorite
+    onToggleFavorite,
+    highlightQuery,
   };
 
   if (entries.length === 0) {

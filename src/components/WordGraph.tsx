@@ -52,21 +52,36 @@ export const WordGraph = ({
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Update dimensions based on container
+  // Update dimensions based on container — debounced to avoid full rebuilds on every pixel
   useEffect(() => {
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
     const updateDimensions = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        setDimensions({
-          width: Math.max(rect.width - 32, 400),
-          height: Math.min(Math.max(rect.width * 0.6, 400), 600)
+        const nextWidth = Math.max(rect.width - 32, 400);
+        const nextHeight = Math.min(Math.max(rect.width * 0.6, 400), 600);
+        setDimensions(prev => {
+          // Only update if change is significant (>10px) to avoid jitter
+          if (Math.abs(prev.width - nextWidth) < 10 && Math.abs(prev.height - nextHeight) < 10) {
+            return prev;
+          }
+          return { width: nextWidth, height: nextHeight };
         });
       }
     };
 
+    const debouncedUpdate = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(updateDimensions, 150);
+    };
+
     updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
+    window.addEventListener('resize', debouncedUpdate);
+    return () => {
+      window.removeEventListener('resize', debouncedUpdate);
+      if (resizeTimer) clearTimeout(resizeTimer);
+    };
   }, []);
 
   // Build graph data

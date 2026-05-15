@@ -50,6 +50,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 import { unifiedDictionary, type UnifiedEntry } from '@/services/unifiedDictionaryService';
 import { hskDataService } from '@/services/hskDataService';
@@ -297,6 +299,7 @@ function App() {
   const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [showStudyComplete, setShowStudyComplete] = useState(false);
 
   // Memoized quiz entries to prevent regeneration on every render
   const quizEntries = useMemo(() => {
@@ -731,6 +734,13 @@ function App() {
         const filtered = results.map((r) => r.entry);
 
         searchCacheRef.current.set(cacheKey, filtered);
+        // Limit cache size to prevent unbounded growth
+        if (searchCacheRef.current.size > 30) {
+          const firstKey = searchCacheRef.current.keys().next().value;
+          if (firstKey !== undefined) {
+            searchCacheRef.current.delete(firstKey);
+          }
+        }
 
         startTransition(() => {
           setSearchResults(filtered);
@@ -773,6 +783,13 @@ function App() {
   const toggleFavorite = useCallback((id: string) => {
     const isFav = hskDataService.toggleFavorite(id);
     setFavorites(hskDataService.getFavorites());
+    const entry = unifiedDictionary.getEntry(id);
+    if (entry) {
+      toast(isFav ? 'Added to favorites' : 'Removed from favorites', {
+        description: entry.hanzi,
+        duration: 1500,
+      });
+    }
     return isFav;
   }, []);
 
@@ -784,6 +801,7 @@ function App() {
     setCurrentStudyIndex(0);
     setShowAnswer(false);
     setShowQuiz(false);
+    setShowStudyComplete(false);
     setCurrentView('study');
   }, []);
 
@@ -798,7 +816,7 @@ function App() {
       setShowAnswer(false);
     } else {
       refreshStats();
-      setCurrentView('dashboard');
+      setShowStudyComplete(true);
     }
   }, [currentStudyIndex, studyEntries, refreshStats]);
 
@@ -857,9 +875,9 @@ function App() {
       refreshStats();
       setShowImportDialog(false);
       setImportData('');
-      alert('Data imported successfully!');
+      toast.success('Data imported successfully!');
     } else {
-      alert('Failed to import data. Please check the format.');
+      toast.error('Failed to import data. Please check the format.');
     }
   }, [importData, refreshStats]);
 
@@ -1244,6 +1262,7 @@ function App() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="Clear search"
                   className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8"
                   onClick={() => {
                     setSearchQuery('');
@@ -1355,6 +1374,7 @@ function App() {
                     <Button
                       variant={listViewMode === 'paginated' ? 'secondary' : 'ghost'}
                       size="icon"
+                      aria-label="Grid view"
                       className="h-7 w-7 sm:h-8 sm:w-8"
                       onClick={() => setListViewMode('paginated')}
                     >
@@ -1370,6 +1390,7 @@ function App() {
                     <Button
                       variant={listViewMode === 'virtualized' ? 'secondary' : 'ghost'}
                       size="icon"
+                      aria-label="List view"
                       className="h-7 w-7 sm:h-8 sm:w-8"
                       onClick={() => setListViewMode('virtualized')}
                     >
@@ -1397,6 +1418,7 @@ function App() {
             itemsPerPage={48}
             currentPage={browsePage}
             onPageChange={setBrowsePage}
+            highlightQuery={deferredSearchQuery}
           />
         ) : (
           <VirtualizedWordList
@@ -1404,6 +1426,7 @@ function App() {
             favoriteIds={favorites}
             onEntryClick={(entry) => openDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
             onToggleFavorite={toggleFavorite}
+            highlightQuery={deferredSearchQuery}
           />
         )}
       </Suspense>
@@ -1510,6 +1533,45 @@ function App() {
             />
           </Suspense>
         </div>
+      );
+    }
+
+    if (showStudyComplete) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-lg mx-auto"
+        >
+          <Card className="p-8 text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Trophy className="w-12 h-12 text-primary" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Session Complete!</h2>
+              <p className="text-muted-foreground">
+                You reviewed {studyEntries.length} words. Great work!
+              </p>
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={() => {
+                setShowStudyComplete(false);
+                startStudySession(studyEntries.length);
+              }}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Study Again
+              </Button>
+              <Button variant="outline" onClick={() => {
+                setShowStudyComplete(false);
+                setCurrentView('dashboard');
+              }}>
+                Back to Dashboard
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
       );
     }
 
@@ -2018,7 +2080,7 @@ function App() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
+            <Button variant="ghost" size="icon" aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'} onClick={() => setDarkMode(!darkMode)}>
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
             
@@ -2033,7 +2095,7 @@ function App() {
               }}
             >
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label="Settings">
                   <Settings className="w-5 h-5" />
                 </Button>
               </DialogTrigger>
@@ -2372,6 +2434,7 @@ function App() {
           </div>
         </DialogContent>
       </Dialog>
+      <Toaster theme={darkMode ? 'dark' : 'light'} position="bottom-right" richColors />
     </div>
   );
 }
