@@ -12,6 +12,7 @@ import {
 } from '@/lib/datasetLoader';
 import { loadDataProgressively, type ProgressCallback } from '@/lib/progressiveLoader';
 import type { CedictEnrichmentDataset, TatoebaExamplesDataset } from '@/lib/datasetLoader';
+import { stripTones } from '@/lib/pinyin';
 
 // Unified Dictionary Entry - combines HSK + makemeahanzi + additional data
 export interface UnifiedEntry {
@@ -620,6 +621,7 @@ class UnifiedDictionaryService {
     
     const { hskLevel, partOfSpeech, maxResults } = options;
     const normalizedQuery = query.toLowerCase().trim();
+    const tonelessQuery = stripTones(normalizedQuery);
     const shouldLimit = typeof maxResults === 'number' && Number.isFinite(maxResults);
 
     // Cache key includes query + all filters
@@ -668,14 +670,26 @@ class UnifiedDictionaryService {
       }
     }
     
-    // 2. Pinyin match
-    const pinyinMatches = this.pinyinIndex.get(normalizedQuery);
+    // 2. Pinyin match (toneless exact)
+    const pinyinMatches = this.pinyinIndex.get(tonelessQuery);
     if (pinyinMatches) {
       for (const id of pinyinMatches) {
         if (!results.has(id)) {
           const entry = this.entries.get(id);
           if (entry && this.entryInList(entry, allEntries)) {
             results.set(id, { entry, matchType: 'pinyin', matchScore: 80 });
+          }
+        }
+      }
+    }
+
+    // 2b. Partial pinyin prefix match (toneless)
+    if (tonelessQuery.length >= 2 && !results.has(tonelessQuery)) {
+      for (const entry of allEntries) {
+        if (!results.has(entry.id)) {
+          const entryToneless = stripTones(entry.pinyin);
+          if (entryToneless.startsWith(tonelessQuery)) {
+            results.set(entry.id, { entry, matchType: 'pinyin', matchScore: 70 });
           }
         }
       }
@@ -696,7 +710,7 @@ class UnifiedDictionaryService {
     
     // 4. Fuzzy hanzi match (contains query)
     for (const entry of allEntries) {
-      if (!results.has(entry.id) && entry.hanzi.includes(query) && entry.hanzi !== query) {
+      if (!results.has(entry.id) && entry.hanzi.includes(normalizedQuery) && entry.hanzi !== normalizedQuery) {
         results.set(entry.id, { entry, matchType: 'fuzzy', matchScore: 40 });
       }
     }

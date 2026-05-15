@@ -382,8 +382,10 @@ export const GrammarMap = ({ userStats }: GrammarMapProps) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const payload = JSON.stringify(Array.from(masteredSet));
-    window.localStorage.setItem(GRAMMAR_PROGRESS_STORAGE_KEY, payload);
+    try {
+      const payload = JSON.stringify(Array.from(masteredSet));
+      window.localStorage.setItem(GRAMMAR_PROGRESS_STORAGE_KEY, payload);
+    } catch { /* ignore */ }
   }, [masteredSet]);
 
   useEffect(() => {

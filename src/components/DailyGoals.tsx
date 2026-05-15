@@ -109,7 +109,9 @@ export const DailyGoals = ({ stats, onUpdateGoals }: DailyGoalsProps) => {
 
   const saveGoals = () => {
     setSavedGoals(tempGoals);
-    localStorage.setItem('hsk_daily_goals', JSON.stringify(tempGoals));
+    try {
+      localStorage.setItem('hsk_daily_goals', JSON.stringify(tempGoals));
+    } catch { /* ignore */ }
     setShowSettings(false);
     if (onUpdateGoals) onUpdateGoals(tempGoals);
   };

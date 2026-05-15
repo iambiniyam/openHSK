@@ -56,11 +56,13 @@ export function loadAzureConfig(): AzureTtsConfig | null {
 }
 
 export function saveAzureConfig(config: AzureTtsConfig | null): void {
-  if (!config) {
-    localStorage.removeItem(STORAGE_KEY);
-    return;
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  try {
+    if (!config) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  } catch { /* ignore */ }
 }
 
 function escapeSsml(text: string): string {
