@@ -7,7 +7,9 @@ import {
   Hash,
   ArrowRight,
   X,
+  Feather,
 } from 'lucide-react';
+import { Empty, EmptyContent, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -177,13 +179,13 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
 
       {/* Story Cards */}
       {filteredStories.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>No stories found matching your criteria.</p>
-            <p className="text-sm mt-1">Try adjusting your search or filter.</p>
-          </CardContent>
-        </Card>
+        <Empty className="min-h-[300px]">
+          <EmptyContent>
+            <EmptyMedia variant="icon"><Feather className="size-6" /></EmptyMedia>
+            <EmptyTitle>No Stories Found</EmptyTitle>
+            <EmptyDescription>Try adjusting your search or HSK level filter to find stories.</EmptyDescription>
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredStories.map((story, i) => {

@@ -1,5 +1,7 @@
 import type { HSKEntry } from '@/types/hsk';
+import type { HanziCharacter, HanziGraphics } from '@/types/hanzi';
 import { fetchWithCacheFallback } from '@/lib/offlineFetch';
+import { yieldToMain } from '@/lib/yieldToMain';
 import {
   loadCedictEnrichmentDataset,
   loadGraphicsDatasetPartsText,
@@ -169,9 +171,9 @@ class UnifiedDictionaryService {
       ]);
 
       this.hskData = hskData;
-      this.parseCharacterData(dictText);
+      await this.parseCharacterData(dictText);
       for (const graphicsPart of graphicsParts) {
-        this.parseGraphicsData(graphicsPart);
+        await this.parseGraphicsData(graphicsPart);
       }
 
       this.cedictEnrichment.clear();
@@ -208,10 +210,10 @@ class UnifiedDictionaryService {
       }
       
       // Build unified entries
-      this.buildUnifiedEntries();
+      await this.buildUnifiedEntries();
       
       // Build search indexes
-      this.buildIndexes();
+      await this.buildIndexes();
       
       this.loaded = true;
       console.timeEnd('Dictionary Load');
@@ -239,9 +241,9 @@ class UnifiedDictionaryService {
       const data = await loadDataProgressively(onProgress, signal);
 
       this.hskData = [...(data.hskPart1 as HSKEntry[]), ...(data.hskPart2 as HSKEntry[])];
-      this.parseCharacterData(data.dictionaryText);
+      await this.parseCharacterData(data.dictionaryText);
       for (const graphicsPart of data.graphicsParts) {
-        this.parseGraphicsData(graphicsPart);
+        await this.parseGraphicsData(graphicsPart);
       }
 
       this.cedictEnrichment.clear();
@@ -280,10 +282,10 @@ class UnifiedDictionaryService {
       }
       
       // Build unified entries
-      this.buildUnifiedEntries();
+      await this.buildUnifiedEntries();
       
       // Build search indexes
-      this.buildIndexes();
+      await this.buildIndexes();
       
       this.loaded = true;
       console.timeEnd('Dictionary Progressive Load');
@@ -318,33 +320,36 @@ class UnifiedDictionaryService {
       : true;
   }
 
-  private parseCharacterData(text: string): void {
+  private async parseCharacterData(text: string): Promise<void> {
     const lines = text.trim().split('\n');
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
       try {
-        const entry = JSON.parse(line) as CharacterDictionaryData;
+        const entry = JSON.parse(lines[i]) as CharacterDictionaryData;
         this.charData.set(entry.character, entry);
       } catch {
         // Skip invalid lines
       }
+      if (i % 1000 === 999) await yieldToMain();
     }
   }
 
-  private parseGraphicsData(text: string): void {
+  private async parseGraphicsData(text: string): Promise<void> {
     const lines = text.trim().split('\n');
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
       try {
-        const entry = JSON.parse(line) as CharacterGraphics;
+        const entry = JSON.parse(lines[i]) as CharacterGraphics;
         this.graphicsData.set(entry.character, entry);
       } catch {
         // Skip invalid lines
       }
+      if (i % 1000 === 999) await yieldToMain();
     }
   }
 
-  private buildUnifiedEntries(): void {
+  private async buildUnifiedEntries(): Promise<void> {
     // Process HSK entries
-    for (const hskEntry of this.hskData) {
+    for (let i = 0; i < this.hskData.length; i++) {
+      const hskEntry = this.hskData[i];
       const hanzi = hskEntry.source.hanzi;
       const id = hskEntry.entry_id;
       const cedict = this.cedictEnrichment.get(hanzi);
@@ -421,10 +426,11 @@ class UnifiedDictionaryService {
       };
       
       this.entries.set(id, unified);
+      if (i % 500 === 499) await yieldToMain();
     }
     
     // Enrich related words with pinyin from our data
-    this.enrichRelatedWords();
+    await this.enrichRelatedWords();
   }
 
   private mergeDefinitions(primary: string[], secondary: string[]): string[] {
@@ -536,15 +542,18 @@ class UnifiedDictionaryService {
     return 'advanced';
   }
 
-  private enrichRelatedWords(): void {
+  private async enrichRelatedWords(): Promise<void> {
     // Create a lookup for all words
     const wordLookup = new Map<string, UnifiedEntry>();
-    for (const entry of this.entries.values()) {
-      wordLookup.set(entry.hanzi, entry);
+    const entriesArray = Array.from(this.entries.values());
+    for (let i = 0; i < entriesArray.length; i++) {
+      wordLookup.set(entriesArray[i].hanzi, entriesArray[i]);
+      if (i % 500 === 499) await yieldToMain();
     }
     
     // Enrich related words with pinyin and definitions
-    for (const entry of this.entries.values()) {
+    for (let i = 0; i < entriesArray.length; i++) {
+      const entry = entriesArray[i];
       for (const related of [...entry.synonyms, ...entry.antonyms, ...entry.wordFamily]) {
         const found = wordLookup.get(related.hanzi);
         if (found) {
@@ -553,11 +562,14 @@ class UnifiedDictionaryService {
           related.hskLevel = found.hskLevel;
         }
       }
+      if (i % 500 === 499) await yieldToMain();
     }
   }
 
-  private buildIndexes(): void {
-    for (const entry of this.entries.values()) {
+  private async buildIndexes(): Promise<void> {
+    const entriesArray = Array.from(this.entries.values());
+    for (let i = 0; i < entriesArray.length; i++) {
+      const entry = entriesArray[i];
       // Hanzi index
       const existingHanzi = this.hanziIndex.get(entry.hanzi) || [];
       existingHanzi.push(entry.id);
@@ -594,6 +606,7 @@ class UnifiedDictionaryService {
           }
         }
       }
+      if (i % 500 === 499) await yieldToMain();
     }
   }
 
@@ -920,6 +933,90 @@ class UnifiedDictionaryService {
   // Check if loaded
   isLoaded(): boolean {
     return this.loaded;
+  }
+
+  // --- Hanzi API (replaces makemeahanziService) ---
+
+  getHanziCharacter(char: string): HanziCharacter | undefined {
+    const data = this.charData.get(char);
+    if (!data) return undefined;
+    return data as unknown as HanziCharacter;
+  }
+
+  getHanziGraphics(char: string): HanziGraphics | undefined {
+    return this.graphicsData.get(char) as unknown as HanziGraphics | undefined;
+  }
+
+  getHanziDecomposition(char: string): {
+    structure: string;
+    components: { char: string; name?: string; meaning?: string }[];
+    etymology?: HanziCharacter['etymology'];
+  } | null {
+    const entry = this.charData.get(char);
+    if (!entry) return null;
+
+    const components: { char: string; name?: string; meaning?: string }[] = [];
+    const componentChars = entry.decomposition.replace(/[⿰⿱⿲⿳⿴⿵⿶⿷⿸⿹⿺⿻？]/g, '').split('');
+    for (const compChar of componentChars) {
+      const compEntry = this.charData.get(compChar);
+      components.push({
+        char: compChar,
+        name: compEntry?.radical,
+        meaning: compEntry?.definition
+      });
+    }
+
+    return {
+      structure: entry.decomposition,
+      components,
+      etymology: entry.etymology
+    };
+  }
+
+  getHanziRadical(char: string): { radical: string; meaning?: string } | null {
+    const entry = this.charData.get(char);
+    if (!entry) return null;
+    const radicalEntry = this.charData.get(entry.radical);
+    return {
+      radical: entry.radical,
+      meaning: radicalEntry?.definition
+    };
+  }
+
+  searchHanziByDefinition(query: string): HanziCharacter[] {
+    const results: HanziCharacter[] = [];
+    const lowerQuery = query.toLowerCase();
+    for (const entry of this.charData.values()) {
+      if (entry.definition?.toLowerCase().includes(lowerQuery)) {
+        results.push(entry as unknown as HanziCharacter);
+      }
+    }
+    return results.slice(0, 20);
+  }
+
+  getHanziByRadical(radical: string): HanziCharacter[] {
+    const results: HanziCharacter[] = [];
+    for (const entry of this.charData.values()) {
+      if (entry.radical === radical) {
+        results.push(entry as unknown as HanziCharacter);
+      }
+    }
+    return results.slice(0, 50);
+  }
+
+  getAllHanziRadicals(): { char: string; definition?: string; count: number }[] {
+    const radicalCounts = new Map<string, number>();
+    for (const entry of this.charData.values()) {
+      const count = radicalCounts.get(entry.radical) || 0;
+      radicalCounts.set(entry.radical, count + 1);
+    }
+    return Array.from(radicalCounts.entries())
+      .map(([char, count]) => ({
+        char,
+        definition: this.charData.get(char)?.definition,
+        count
+      }))
+      .sort((a, b) => b.count - a.count);
   }
 }
 

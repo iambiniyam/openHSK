@@ -117,6 +117,9 @@ export default defineConfig(() => ({
           if (id.includes('lucide-react')) {
             return 'icons-vendor';
           }
+          if (id.includes('react-window')) {
+            return 'window-vendor';
+          }
 
           return 'vendor';
         },

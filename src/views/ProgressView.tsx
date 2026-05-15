@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Upload, RotateCcw } from 'lucide-react';
+import { Download, Upload, RotateCcw, BookOpen, Flame, Trophy, Clock } from 'lucide-react';
 import { hskDataService } from '@/services/hskDataService';
 import { SectionLoader } from './SectionLoader';
 import type { UserStats } from '@/types/hsk';
@@ -78,16 +78,20 @@ export const ProgressView = memo(function ProgressView({
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Total Words', value: userStats?.totalStudied || 0 },
-                { label: 'Current Streak', value: userStats?.currentStreak || 0 },
-                { label: 'Longest Streak', value: userStats?.longestStreak || 0 },
-                { label: 'Due for Review', value: dueCount },
-              ].map(stat => (
-                <div key={stat.label} className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-3xl font-bold">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
+                { label: 'Total Words', value: userStats?.totalStudied || 0, icon: BookOpen, color: 'text-blue-500' },
+                { label: 'Current Streak', value: userStats?.currentStreak || 0, icon: Flame, color: 'text-orange-500' },
+                { label: 'Longest Streak', value: userStats?.longestStreak || 0, icon: Trophy, color: 'text-amber-500' },
+                { label: 'Due for Review', value: dueCount, icon: Clock, color: 'text-red-500' },
+              ].map(stat => {
+                const Icon = stat.icon;
+                return (
+                  <div key={stat.label} className="text-center p-4 bg-muted rounded-lg space-y-2">
+                    <Icon className={`w-5 h-5 mx-auto ${stat.color}`} />
+                    <div className="text-3xl font-bold">{stat.value}</div>
+                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

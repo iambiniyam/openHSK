@@ -454,7 +454,7 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
             </CardHeader>
             <CardContent className="space-y-5">
               {/* Current Word Display */}
-              {currentWord && (
+              {currentWord ? (
                 <div className="text-center space-y-3 p-6 sm:p-8 bg-gradient-to-br from-primary/5 via-background to-primary/5 rounded-2xl border border-primary/10 relative">
                   <div className="absolute top-3 right-3 flex items-center gap-1">
                     <Button
@@ -496,7 +496,18 @@ export const AudioPlaylist: React.FC<AudioPlaylistProps> = ({ onWordClick }) => 
                     HSK {currentWord.source.level} • {currentIndex + 1} of {playlist.length}
                   </div>
                 </div>
-              )}
+              ) : playlist.length === 0 ? (
+                <div className="text-center space-y-3 p-8 sm:p-10 rounded-2xl border border-dashed border-border">
+                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto">
+                    <Headphones className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Playlist is empty</p>
+                    <p className="text-sm text-muted-foreground mt-1">Select HSK levels in the settings panel to build your playlist.</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>Open Settings</Button>
+                </div>
+              ) : null}
 
               {/* Session Stats */}
               <div className="grid grid-cols-3 gap-3">

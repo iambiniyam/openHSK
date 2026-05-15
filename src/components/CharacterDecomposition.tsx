@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 // CharacterDecomposition component
-import { makemeahanziService, type HanziCharacter } from '@/services/makemeahanziService';
+import { makemeahanziService } from '@/services/makemeahanziService';
+import type { HanziCharacter } from '@/types/hanzi';
 import { Lightbulb, BookOpen, GitBranch, Type } from 'lucide-react';
 
 interface CharacterDecompositionProps {

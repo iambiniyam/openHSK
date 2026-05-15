@@ -350,7 +350,7 @@ export const WordDetail = ({
           <TabsTrigger value="etymology" className="text-xs sm:text-sm py-2">
             <Lightbulb className="w-4 h-4 mr-1 sm:mr-2" /> 
             <span className="hidden sm:inline">Etymology</span>
-            <span className="sm:hidden">Ety</span>
+            <span className="sm:hidden">Origin</span>
           </TabsTrigger>
         </TabsList>
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, SkipForward, SkipBack } from 'lucide-react';
-import { makemeahanziService, type HanziGraphics } from '@/services/makemeahanziService';
+import { makemeahanziService } from '@/services/makemeahanziService';
+import type { HanziGraphics } from '@/types/hanzi';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 

@@ -9,7 +9,9 @@ import {
   Layers,
   Clock,
   Hash,
+  BookX,
 } from 'lucide-react';
+import { Empty, EmptyContent, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -223,15 +225,13 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
 
       {/* Bookshelf Grid */}
       {filteredBooks.length === 0 ? (
-        <Card className="bg-muted/30 border-dashed">
-          <CardContent className="p-12 text-center">
-            <div className="text-6xl mb-4">📖</div>
-            <h3 className="text-lg font-semibold mb-1">No books found</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Try adjusting your filters or search query. Generate more books with <code className="bg-muted px-1 rounded">npm run data:prepare:books</code>
-            </p>
-          </CardContent>
-        </Card>
+        <Empty className="min-h-[300px]">
+          <EmptyContent>
+            <EmptyMedia variant="icon"><BookX className="size-6" /></EmptyMedia>
+            <EmptyTitle>No Books Found</EmptyTitle>
+            <EmptyDescription>Try adjusting your filters or search query to find books matching your criteria.</EmptyDescription>
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBooks.map((book, i) => {
@@ -341,18 +341,17 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
 
       {/* Empty state if no books at all */}
       {books.length === 0 && (
-        <Card className="bg-muted/30 border-dashed">
-          <CardContent className="p-12 text-center space-y-3">
-            <Library className="w-16 h-16 mx-auto text-muted-foreground/30" />
-            <h3 className="text-lg font-semibold">Library is empty</h3>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Generate genre-based books that cover every HSK word using the AI pipeline.
-            </p>
-            <code className="text-xs bg-muted px-3 py-1.5 rounded-md inline-block">
-              npm run data:prepare:books
-            </code>
-          </CardContent>
-        </Card>
+        <Empty className="min-h-[300px]">
+          <EmptyContent>
+            <EmptyMedia variant="icon"><Library className="size-6" /></EmptyMedia>
+            <EmptyTitle>Library is Empty</EmptyTitle>
+            <EmptyDescription>Books are optional content. If you are self-hosting, you can generate genre-based books with the AI pipeline.</EmptyDescription>
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer hover:text-foreground transition-colors">For developers</summary>
+              <code className="block mt-2 bg-muted px-3 py-1.5 rounded-md">npm run data:prepare:books</code>
+            </details>
+          </EmptyContent>
+        </Empty>
       )}
     </div>
   );

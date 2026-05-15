@@ -122,7 +122,7 @@ const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowP
               variant="ghost"
               size="icon"
               aria-label={`Listen to ${entry.hanzi}`}
-              className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
+              className="h-8 w-8 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity active:scale-90"
               onClick={handleSpeak}
             >
               <Volume2 className="w-4 h-4" />
@@ -131,7 +131,7 @@ const Row = ({ index, style, ariaAttributes, ...data }: RowComponentProps & RowP
               variant="ghost"
               size="icon"
               aria-label={isFav ? `Remove ${entry.hanzi} from favorites` : `Add ${entry.hanzi} to favorites`}
-              className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
+              className="h-8 w-8 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity active:scale-90"
               onClick={handleFavorite}
             >
               <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />

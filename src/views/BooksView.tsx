@@ -1,5 +1,6 @@
 import { Suspense, lazy, memo } from 'react';
 import { motion } from 'framer-motion';
+import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SectionLoader } from './SectionLoader';
 import { unifiedDictionary } from '@/services/unifiedDictionaryService';
@@ -50,7 +51,7 @@ export const BooksView = memo(function BooksView({
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => onSetBookView('browse')}>
-            ← Back to Books
+            <ChevronLeft className="w-4 h-4 mr-1" />Back to Books
           </Button>
         </div>
         <Suspense fallback={<SectionLoader label="Loading book..." />}>

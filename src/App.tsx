@@ -1,5 +1,5 @@
 import { lazy, useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { 
   BarChart3, 
   Brain,
@@ -1175,6 +1175,7 @@ function App() {
 
       {/* Main Content */}
       <ErrorBoundary>
+        <MotionConfig reducedMotion="user">
         <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 overflow-x-hidden">
           <AnimatePresence>
             <motion.div
@@ -1340,6 +1341,7 @@ function App() {
             </motion.div>
           </AnimatePresence>
         </main>
+        </MotionConfig>
       </ErrorBoundary>
 
       {/* Study Session Dialog */}

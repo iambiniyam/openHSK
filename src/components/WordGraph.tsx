@@ -86,6 +86,12 @@ export const WordGraph = ({
 
   // Build graph data
   const buildGraphData = useCallback(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const maxSynonyms = isMobile ? 3 : 5;
+    const maxAntonyms = isMobile ? 2 : 4;
+    const maxFamily = isMobile ? 3 : 5;
+    const maxRelated = isMobile ? 4 : 8;
+
     const nodes: GraphNode[] = [
       { 
         id: entry.id, 
@@ -100,7 +106,7 @@ export const WordGraph = ({
     const links: GraphLink[] = [];
 
     // Add synonym nodes
-    entry.synonyms.slice(0, 5).forEach((syn, idx) => {
+    entry.synonyms.slice(0, maxSynonyms).forEach((syn, idx) => {
       const synEntry = relatedEntries.find(e => e.hanzi === syn.hanzi);
       const synId = `syn-${idx}`;
       nodes.push({
@@ -120,7 +126,7 @@ export const WordGraph = ({
     });
 
     // Add antonym nodes
-    entry.antonyms.slice(0, 4).forEach((ant, idx) => {
+    entry.antonyms.slice(0, maxAntonyms).forEach((ant, idx) => {
       const antEntry = relatedEntries.find(e => e.hanzi === ant.hanzi);
       const antId = `ant-${idx}`;
       nodes.push({
@@ -140,7 +146,7 @@ export const WordGraph = ({
     });
 
     // Add word family nodes
-    entry.wordFamily.slice(0, 5).forEach((word, idx) => {
+    entry.wordFamily.slice(0, maxFamily).forEach((word, idx) => {
       const wordEntry = relatedEntries.find(e => e.hanzi === word.hanzi);
       const wordId = `family-${idx}`;
       nodes.push({
@@ -162,7 +168,7 @@ export const WordGraph = ({
     // Add related entries with shared characters
     relatedEntries
       .filter(e => e.id !== entry.id)
-      .slice(0, 8)
+      .slice(0, maxRelated)
       .forEach((relEntry, idx) => {
         const relId = `related-${idx}`;
         if (!nodes.find(n => n.label === relEntry.hanzi)) {

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Heart, Trash2, Volume2, ExternalLink } from 'lucide-react';
+import { Empty, EmptyContent, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import { ttsService } from '@/services/ttsService';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
 
@@ -34,15 +35,13 @@ export const FavoritesList = ({
 
   if (favorites.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <Heart className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Favorites Yet</h3>
-          <p className="text-sm text-muted-foreground">
-            Click the heart icon on any word to add it to your favorites.
-          </p>
-        </CardContent>
-      </Card>
+      <Empty className="min-h-[300px]">
+        <EmptyContent>
+          <EmptyMedia variant="icon"><Heart className="size-6 text-red-400" /></EmptyMedia>
+          <EmptyTitle>No Favorites Yet</EmptyTitle>
+          <EmptyDescription>Click the heart icon on any word to save it here for quick access.</EmptyDescription>
+        </EmptyContent>
+      </Empty>
     );
   }
 

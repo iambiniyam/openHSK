@@ -1,13 +1,14 @@
-import { Suspense, lazy, memo } from 'react';
+import { Suspense, lazy, memo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Volume2, Headphones, XCircle, CheckCircle2, Trophy, RotateCcw } from 'lucide-react';
+import { Volume2, Headphones, XCircle, CheckCircle2, Trophy, RotateCcw, ChevronLeft, Brain } from 'lucide-react';
 import { ttsService } from '@/services/ttsService';
 import { hskDataService } from '@/services/hskDataService';
 import { SectionLoader } from './SectionLoader';
+import { Empty, EmptyContent, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
 import type { ViewMode } from '@/App';
 
@@ -48,11 +49,33 @@ export const StudyView = memo(function StudyView({
   onStartStudySession,
   onRefreshStats,
 }: StudyViewProps) {
+  // Keyboard navigation for study mode
+  useEffect(() => {
+    if (showQuiz || showStudyComplete) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      if (!showAnswer) {
+        if (e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          onSetShowAnswer(true);
+        }
+      } else {
+        if (e.key === '1') { e.preventDefault(); onHandleStudyResult(1); }
+        else if (e.key === '2') { e.preventDefault(); onHandleStudyResult(2); }
+        else if (e.key === '3') { e.preventDefault(); onHandleStudyResult(3); }
+        else if (e.key === '4') { e.preventDefault(); onHandleStudyResult(4); }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAnswer, showQuiz, showStudyComplete, onSetShowAnswer, onHandleStudyResult]);
   if (showQuiz) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => { onSetShowQuiz(false); onSetCurrentView('dashboard'); }}>← Exit Quiz</Button>
+          <Button variant="ghost" onClick={() => { onSetShowQuiz(false); onSetCurrentView('dashboard'); }}><ChevronLeft className="w-4 h-4 mr-1" />Exit Quiz</Button>
         </div>
         <Suspense fallback={<SectionLoader label="Preparing quiz mode..." />}>
           <QuizMode
@@ -80,7 +103,7 @@ export const StudyView = memo(function StudyView({
           </div>
           <div className="flex gap-2 justify-center">
             <Button onClick={() => { onSetShowStudyComplete(false); onStartStudySession(studyEntries.length); }}><RotateCcw className="w-4 h-4 mr-2" />Study Again</Button>
-            <Button variant="outline" onClick={() => { onSetShowStudyComplete(false); onSetCurrentView('dashboard'); }}>Back to Dashboard</Button>
+            <Button variant="outline" onClick={() => { onSetShowStudyComplete(false); onSetCurrentView('dashboard'); }}><ChevronLeft className="w-4 h-4 mr-1" />Dashboard</Button>
           </div>
         </Card>
       </motion.div>
@@ -88,12 +111,26 @@ export const StudyView = memo(function StudyView({
   }
 
   const currentEntry = studyEntries[currentStudyIndex];
-  if (!currentEntry) return null;
+  if (!currentEntry) {
+    return (
+      <Empty className="min-h-[400px]">
+        <EmptyContent>
+          <EmptyMedia variant="icon"><Brain className="size-6" /></EmptyMedia>
+          <EmptyTitle>No Active Study Session</EmptyTitle>
+          <EmptyDescription>Start a session to review words and track your progress.</EmptyDescription>
+          <div className="flex gap-2">
+            <Button onClick={() => onStartStudySession(20)}><Brain className="w-4 h-4 mr-2" />Start Session</Button>
+            <Button variant="outline" onClick={() => onSetCurrentView('dashboard')}>Dashboard</Button>
+          </div>
+        </EmptyContent>
+      </Empty>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => onSetCurrentView('dashboard')}>← Exit Session</Button>
+        <Button variant="ghost" onClick={() => onSetCurrentView('dashboard')}><ChevronLeft className="w-4 h-4 mr-1" />Exit Session</Button>
         <div className="text-sm text-muted-foreground">{currentStudyIndex + 1} / {studyEntries.length}</div>
       </div>
 

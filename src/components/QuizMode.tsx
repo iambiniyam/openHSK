@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Volume2, CheckCircle2, XCircle, ArrowRight, Trophy, Headphones } from 'lucide-react';
+import { Volume2, CheckCircle2, XCircle, ArrowRight, Trophy, Headphones, HelpCircle } from 'lucide-react';
 import { ttsService } from '@/services/ttsService';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
 
@@ -334,10 +334,23 @@ export const QuizMode = ({ entries, onComplete, onExit }: QuizModeProps) => {
   }
 
   if (!currentQuestion) {
+    const isEmpty = entries.length === 0;
     return (
       <Card className="w-full max-w-lg mx-auto">
-        <CardContent className="p-8 text-center">
-          <p>Loading quiz...</p>
+        <CardContent className="p-8 text-center space-y-4">
+          {isEmpty ? (
+            <>
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto">
+                <HelpCircle className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium">No words available</p>
+                <p className="text-sm text-muted-foreground mt-1">Browse the dictionary first to build up your vocabulary.</p>
+              </div>
+            </>
+          ) : (
+            <p className="text-muted-foreground">Loading quiz...</p>
+          )}
         </CardContent>
       </Card>
     );

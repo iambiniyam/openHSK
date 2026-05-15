@@ -116,7 +116,7 @@ export const PaginatedWordList = ({
               key={entry.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
+              transition={{ delay: Math.min(index * 0.03, 0.3) }}
             >
               <Card
                 className="p-3 sm:p-4 cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-primary/50 group h-full overflow-hidden"
@@ -160,7 +160,7 @@ export const PaginatedWordList = ({
                         variant="ghost"
                         size="icon"
                         aria-label={`Listen to ${entry.hanzi}`}
-                        className="h-7 w-7 sm:h-8 sm:w-8 opacity-60 group-hover:opacity-100 transition-opacity"
+                        className="h-7 w-7 sm:h-8 sm:w-8 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity active:scale-90"
                         onClick={(e) => handleSpeak(e, entry.hanzi)}
                       >
                         <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -169,7 +169,7 @@ export const PaginatedWordList = ({
                         variant="ghost"
                         size="icon"
                         aria-label={isFav ? `Remove ${entry.hanzi} from favorites` : `Add ${entry.hanzi} to favorites`}
-                        className="h-7 w-7 sm:h-8 sm:w-8 opacity-60 group-hover:opacity-100 transition-opacity"
+                        className="h-7 w-7 sm:h-8 sm:w-8 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity active:scale-90"
                         onClick={(e) => handleFavorite(e, entry.id)}
                       >
                         <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
