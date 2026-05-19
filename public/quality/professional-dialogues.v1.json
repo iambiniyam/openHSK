@@ -1,8 +1,8 @@
 {
   "meta": {
-    "generated_at": "2026-05-19T01:56:20.403Z",
+    "generated_at": "2026-05-19T03:36:48.833Z",
     "model": "deepseek-chat",
-    "total_scenarios": 8,
+    "total_scenarios": 12,
     "categories": [
       "meeting",
       "review",
@@ -1091,6 +1091,598 @@
           "pinyin": "jìnchéng jiān tōngxìn",
           "english": "inter-process communication",
           "context": "D-Bus vs shared memory discussion"
+        }
+      ]
+    },
+    {
+      "id": "weekly-review",
+      "title_en": "Weekly Team Review",
+      "title_zh": "周会回顾",
+      "category": "meeting",
+      "description_en": "Weekly team review meeting. The team discusses completed tasks, upcoming deliverables, and blockers for the IVI project.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "Tech Lead",
+          "role": "技术主管",
+          "chinese": "好，我们开始周会。先回顾一下本周完成的IVI项目任务。",
+          "pinyin": "Hǎo, wǒmen kāishǐ zhōuhuì. Xiān huígù yīxià běn zhōu wánchéng de IVI xiàngmù rènwu.",
+          "english": "Okay, let's start the weekly meeting. First, let's review the completed tasks for the IVI project this week."
+        },
+        {
+          "speaker": "Developer",
+          "role": "开发工程师",
+          "chinese": "我完成了导航模块的API集成，已经提交代码审查。",
+          "pinyin": "Wǒ wánchéng le dǎoháng mókuài de API jíchéng, yǐjīng tíjiāo dàimǎ shěnchá.",
+          "english": "I completed the API integration for the navigation module and submitted it for code review."
+        },
+        {
+          "speaker": "Test Engineer",
+          "role": "测试工程师",
+          "chinese": "我测试了媒体播放器的功能，发现一个播放列表刷新的bug，已经提了issue。",
+          "pinyin": "Wǒ cèshì le méitǐ bōfàngqì de gōngnéng, fāxiàn yī gè bōfàng lièbiǎo shuāxīn de bug, yǐjīng tí le issue.",
+          "english": "I tested the media player and found a bug with playlist refresh; I've already filed an issue."
+        },
+        {
+          "speaker": "Product Manager",
+          "role": "产品经理",
+          "chinese": "好的。下周我们有两个关键交付：语音助手和蓝牙连接。进度如何？",
+          "pinyin": "Hǎo de. Xià zhōu wǒmen yǒu liǎng gè guānjiàn jiāofù: yǔyīn zhùshǒu hé lányá liánjiē. Jìndù rúhé?",
+          "english": "Okay. Next week we have two key deliverables: voice assistant and Bluetooth connectivity. What's the progress?"
+        },
+        {
+          "speaker": "Developer",
+          "role": "开发工程师",
+          "chinese": "语音助手的唤醒词识别还在调优，预计下周三能完成。",
+          "pinyin": "Yǔyīn zhùshǒu de huànxǐng cí shìbié hái zài tiáo yōu, yùjì xià zhōusān néng wánchéng.",
+          "english": "The wake word recognition for the voice assistant is still being optimized; I expect to finish by next Wednesday."
+        },
+        {
+          "speaker": "Tech Lead",
+          "role": "技术主管",
+          "chinese": "蓝牙连接呢？有没有blocker？",
+          "pinyin": "Lányá liánjiē ne? Yǒu méiyǒu blocker?",
+          "english": "What about Bluetooth connectivity? Any blockers?"
+        },
+        {
+          "speaker": "Developer",
+          "role": "开发工程师",
+          "chinese": "蓝牙配对协议有个兼容性问题，需要和芯片供应商确认。",
+          "pinyin": "Lányá pèiduì xiéyì yǒu gè jiānróngxìng wèntí, xūyào hé xīnpiàn gōngyìngshāng quèrèn.",
+          "english": "There's a compatibility issue with the Bluetooth pairing protocol; we need to confirm with the chip vendor."
+        },
+        {
+          "speaker": "Tech Lead",
+          "role": "技术主管",
+          "chinese": "那这个blocker需要尽快解决。产品经理，你能帮忙联系供应商吗？",
+          "pinyin": "Nà zhè gè blocker xūyào jǐnkuài jiějué. Chǎnpǐn jīnglǐ, nǐ néng bāngmáng liánxì gōngyìngshāng ma?",
+          "english": "Then this blocker needs to be resolved ASAP. Product Manager, can you help contact the vendor?"
+        },
+        {
+          "speaker": "Product Manager",
+          "role": "产品经理",
+          "chinese": "可以，我今天就发邮件。另外，测试工程师，媒体播放器的bug修复了吗？",
+          "pinyin": "Kěyǐ, wǒ jīntiān jiù fā yóujiàn. Lìngwài, cèshì gōngchéngshī, méitǐ bōfàngqì de bug xiūfù le ma?",
+          "english": "Sure, I'll send an email today. Also, Test Engineer, has the media player bug been fixed?"
+        },
+        {
+          "speaker": "Test Engineer",
+          "role": "测试工程师",
+          "chinese": "开发已经修复了，我正在进行回归测试，今天下班前能验证通过。",
+          "pinyin": "Kāifā yǐjīng xiūfù le, wǒ zhèngzài jìnxíng huíguī cèshì, jīntiān xiàbān qián néng yànzhèng tōngguò.",
+          "english": "The developer has fixed it; I'm running regression tests and should verify it passes before end of day."
+        },
+        {
+          "speaker": "Tech Lead",
+          "role": "技术主管",
+          "chinese": "很好。最后，下周的发布计划有变化吗？",
+          "pinyin": "Hěn hǎo. Zuìhòu, xià zhōu de fābù jìhuà yǒu biànhuà ma?",
+          "english": "Great. Finally, any changes to next week's release plan?"
+        },
+        {
+          "speaker": "Product Manager",
+          "role": "产品经理",
+          "chinese": "没有变化，还是周五发布。大家加油。",
+          "pinyin": "Méiyǒu biànhuà, háishì zhōuwǔ fābù. Dàjiā jiāyóu.",
+          "english": "No changes, still releasing on Friday. Let's keep up the good work."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "周会",
+          "pinyin": "zhōuhuì",
+          "english": "weekly meeting",
+          "context": "我们开始周会。"
+        },
+        {
+          "chinese": "回顾",
+          "pinyin": "huígù",
+          "english": "review",
+          "context": "先回顾一下本周完成的IVI项目任务。"
+        },
+        {
+          "chinese": "API集成",
+          "pinyin": "API jíchéng",
+          "english": "API integration",
+          "context": "我完成了导航模块的API集成。"
+        },
+        {
+          "chinese": "代码审查",
+          "pinyin": "dàimǎ shěnchá",
+          "english": "code review",
+          "context": "已经提交代码审查。"
+        },
+        {
+          "chinese": "bug",
+          "pinyin": "bug",
+          "english": "bug",
+          "context": "发现一个播放列表刷新的bug。"
+        },
+        {
+          "chinese": "提issue",
+          "pinyin": "tí issue",
+          "english": "file an issue",
+          "context": "已经提了issue。"
+        },
+        {
+          "chinese": "交付",
+          "pinyin": "jiāofù",
+          "english": "deliverable",
+          "context": "下周我们有两个关键交付。"
+        },
+        {
+          "chinese": "唤醒词识别",
+          "pinyin": "huànxǐng cí shìbié",
+          "english": "wake word recognition",
+          "context": "语音助手的唤醒词识别还在调优。"
+        },
+        {
+          "chinese": "调优",
+          "pinyin": "tiáo yōu",
+          "english": "optimize",
+          "context": "还在调优。"
+        },
+        {
+          "chinese": "blocker",
+          "pinyin": "blocker",
+          "english": "blocker",
+          "context": "有没有blocker？"
+        },
+        {
+          "chinese": "兼容性问题",
+          "pinyin": "jiānróngxìng wèntí",
+          "english": "compatibility issue",
+          "context": "蓝牙配对协议有个兼容性问题。"
+        },
+        {
+          "chinese": "芯片供应商",
+          "pinyin": "xīnpiàn gōngyìngshāng",
+          "english": "chip vendor",
+          "context": "需要和芯片供应商确认。"
+        },
+        {
+          "chinese": "回归测试",
+          "pinyin": "huíguī cèshì",
+          "english": "regression test",
+          "context": "我正在进行回归测试。"
+        },
+        {
+          "chinese": "发布计划",
+          "pinyin": "fābù jìhuà",
+          "english": "release plan",
+          "context": "下周的发布计划有变化吗？"
+        }
+      ]
+    },
+    {
+      "id": "asking-help",
+      "title_en": "Asking for Technical Help",
+      "title_zh": "请教技术问题",
+      "category": "technical",
+      "description_en": "A junior test engineer is asking a senior developer for help understanding a HAL layer issue that is causing CTS failures.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "初级工程师",
+          "role": "Junior Engineer",
+          "chinese": "张哥，打扰一下，能请教您一个问题吗？",
+          "pinyin": "Zhāng gē, dǎrǎo yīxià, néng qǐngjiào nín yīgè wèntí ma?",
+          "english": "Brother Zhang, sorry to bother you, can I ask you a question?"
+        },
+        {
+          "speaker": "高级工程师",
+          "role": "Senior Engineer",
+          "chinese": "没问题，你说。",
+          "pinyin": "Méi wèntí, nǐ shuō.",
+          "english": "No problem, go ahead."
+        },
+        {
+          "speaker": "初级工程师",
+          "role": "Junior Engineer",
+          "chinese": "我在跑CTS的时候，发现HAL层有个接口总是返回错误，导致测试失败。",
+          "pinyin": "Wǒ zài pǎo CTS de shíhou, fāxiàn HAL céng yǒu gè jiēkǒu zǒngshì fǎnhuí cuòwù, dǎozhì cèshì shībài.",
+          "english": "When I was running CTS, I found that an interface in the HAL layer always returns an error, causing the test to fail."
+        },
+        {
+          "speaker": "高级工程师",
+          "role": "Senior Engineer",
+          "chinese": "具体是哪个接口？错误码是什么？",
+          "pinyin": "Jùtǐ shì nǎge jiēkǒu? Cuòwù mǎ shì shénme?",
+          "english": "Which specific interface? What is the error code?"
+        },
+        {
+          "speaker": "初级工程师",
+          "role": "Junior Engineer",
+          "chinese": "是camera HAL的configure_streams接口，返回-1，但没有详细的log。",
+          "pinyin": "Shì camera HAL de configure_streams jiēkǒu, fǎnhuí -1, dàn méiyǒu xiángxì de log.",
+          "english": "It's the configure_streams interface of the camera HAL, returning -1, but there's no detailed log."
+        },
+        {
+          "speaker": "高级工程师",
+          "role": "Senior Engineer",
+          "chinese": "你检查过传入的参数吗？stream的数量和格式对不对？",
+          "pinyin": "Nǐ jiǎnchá guò chuánrù de cānshù ma? Stream de shùliàng hé géshì duì bù duì?",
+          "english": "Did you check the input parameters? Are the number and format of streams correct?"
+        },
+        {
+          "speaker": "初级工程师",
+          "role": "Junior Engineer",
+          "chinese": "我看了，stream配置跟文档一致，但我不确定底层的实现有没有问题。",
+          "pinyin": "Wǒ kàn le, stream pèizhì gēn wéndàng yīzhì, dàn wǒ bù quèdìng dǐcéng de shíxiàn yǒu méiyǒu wèntí.",
+          "english": "I checked, the stream configuration matches the documentation, but I'm not sure if there's an issue with the underlying implementation."
+        },
+        {
+          "speaker": "高级工程师",
+          "role": "Senior Engineer",
+          "chinese": "那你加一些log，看看HAL内部到底卡在哪里。我帮你一起看。",
+          "pinyin": "Nà nǐ jiā yīxiē log, kàn kàn HAL nèibù dàodǐ kǎ zài nǎlǐ. Wǒ bāng nǐ yīqǐ kàn.",
+          "english": "Then add some logs to see where exactly the HAL is stuck. I'll help you look together."
+        },
+        {
+          "speaker": "初级工程师",
+          "role": "Junior Engineer",
+          "chinese": "太好了，谢谢张哥！我马上加log再跑一次。",
+          "pinyin": "Tài hǎo le, xièxie Zhāng gē! Wǒ mǎshàng jiā log zài pǎo yī cì.",
+          "english": "Great, thank you Brother Zhang! I'll add logs and run it again right away."
+        },
+        {
+          "speaker": "高级工程师",
+          "role": "Senior Engineer",
+          "chinese": "不客气，有问题随时找我。",
+          "pinyin": "Bù kèqì, yǒu wèntí suíshí zhǎo wǒ.",
+          "english": "You're welcome, feel free to find me anytime if you have issues."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "CTS",
+          "pinyin": "CTS",
+          "english": "Compatibility Test Suite",
+          "context": "跑CTS的时候"
+        },
+        {
+          "chinese": "HAL层",
+          "pinyin": "HAL céng",
+          "english": "Hardware Abstraction Layer",
+          "context": "HAL层有个接口"
+        },
+        {
+          "chinese": "接口",
+          "pinyin": "jiēkǒu",
+          "english": "interface",
+          "context": "camera HAL的configure_streams接口"
+        },
+        {
+          "chinese": "错误码",
+          "pinyin": "cuòwù mǎ",
+          "english": "error code",
+          "context": "错误码是什么"
+        },
+        {
+          "chinese": "log",
+          "pinyin": "log",
+          "english": "log",
+          "context": "没有详细的log"
+        },
+        {
+          "chinese": "参数",
+          "pinyin": "cānshù",
+          "english": "parameter",
+          "context": "传入的参数"
+        },
+        {
+          "chinese": "stream",
+          "pinyin": "stream",
+          "english": "stream",
+          "context": "stream的数量和格式"
+        },
+        {
+          "chinese": "配置",
+          "pinyin": "pèizhì",
+          "english": "configuration",
+          "context": "stream配置跟文档一致"
+        },
+        {
+          "chinese": "底层实现",
+          "pinyin": "dǐcéng shíxiàn",
+          "english": "underlying implementation",
+          "context": "底层的实现"
+        },
+        {
+          "chinese": "加log",
+          "pinyin": "jiā log",
+          "english": "add logs",
+          "context": "加一些log"
+        }
+      ]
+    },
+    {
+      "id": "quarterly-planning",
+      "title_en": "Quarterly Planning",
+      "title_zh": "季度规划",
+      "category": "planning",
+      "description_en": "The team is planning the next quarter's goals for the automotive Android platform, including CDD compliance milestones.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "总监",
+          "role": "Director",
+          "chinese": "大家好，今天讨论Q3的季度规划，重点是汽车Android平台的CDD合规里程碑。",
+          "pinyin": "Dàjiā hǎo, jīntiān tǎolùn Q3 de jìdù guīhuà, zhòngdiǎn shì qìchē Android píngtái de CDD héguī lǐchéngbēi.",
+          "english": "Hello everyone, today we discuss Q3 quarterly planning, focusing on CDD compliance milestones for the automotive Android platform."
+        },
+        {
+          "speaker": "技术主管",
+          "role": "Tech Lead",
+          "chinese": "目前我们还有几个CDD测试项没有通过，比如多用户模式和车辆信号抽象层。",
+          "pinyin": "Mùqián wǒmen hái yǒu jǐ gè CDD cèshì xiàng méiyǒu tōngguò, bǐrú duō yònghù móshì hé chēliàng xìnhào chōuxiàng céng.",
+          "english": "Currently we still have several CDD test items not passed, such as multi-user mode and vehicle signal abstraction layer."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "我们需要在Q3结束前完成所有CDD必测项，否则会影响下一阶段的认证。",
+          "pinyin": "Wǒmen xūyào zài Q3 jiéshù qián wánchéng suǒyǒu CDD bì cè xiàng, fǒuzé huì yǐngxiǎng xià yī jiēduàn de rènzhèng.",
+          "english": "We need to complete all mandatory CDD test items before the end of Q3, otherwise it will affect the next phase of certification."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "测试团队已经制定了详细的测试计划，但需要开发团队提前修复已知的bug。",
+          "pinyin": "Cèshì tuánduì yǐjīng zhìdìng le xiángxì de cèshì jìhuà, dàn xūyào kāifā tuánduì tíqián xiūfù yǐzhī de bug.",
+          "english": "The test team has made a detailed test plan, but needs the development team to fix known bugs in advance."
+        },
+        {
+          "speaker": "技术主管",
+          "role": "Tech Lead",
+          "chinese": "我们会在八月初完成多用户模式的修复，九月中旬搞定车辆信号抽象层。",
+          "pinyin": "Wǒmen huì zài bā yuè chū wánchéng duō yònghù móshì de xiūfù, jiǔ yuè zhōngxún gǎodìng chēliàng xìnhào chōuxiàng céng.",
+          "english": "We will complete the multi-user mode fix in early August and finish the vehicle signal abstraction layer by mid-September."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "那里程碑可以这样设定：八月底完成所有修复，九月份进行全量回归测试。",
+          "pinyin": "Nà lǐchéngbēi kěyǐ zhèyàng shèdìng: bā yuè dǐ wánchéng suǒyǒu xiūfù, jiǔ yuè fèn jìnxíng quánliàng huíguī cèshì.",
+          "english": "Then we can set milestones like this: complete all fixes by end of August, and run full regression tests in September."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "回归测试需要两周时间，九月中旬可以出结果，留出两周缓冲应对突发问题。",
+          "pinyin": "Huíguī cèshì xūyào liǎng zhōu shíjiān, jiǔ yuè zhōngxún kěyǐ chū jiéguǒ, liú chū liǎng zhōu huǎnchōng yìngduì tūfā wèntí.",
+          "english": "Regression testing takes two weeks, results can be out by mid-September, leaving two weeks buffer for unexpected issues."
+        },
+        {
+          "speaker": "总监",
+          "role": "Director",
+          "chinese": "很好，但也要考虑第三方依赖，比如供应商的驱动更新是否及时。",
+          "pinyin": "Hěn hǎo, dàn yě yào kǎolǜ dì sān fāng yīlài, bǐrú gōngyìngshāng de qūdòng gēngxīn shìfǒu jíshí.",
+          "english": "Good, but we also need to consider third-party dependencies, such as whether supplier driver updates are timely."
+        },
+        {
+          "speaker": "技术主管",
+          "role": "Tech Lead",
+          "chinese": "我们已经和供应商确认了，他们的驱动会在七月底提供新版本。",
+          "pinyin": "Wǒmen yǐjīng hé gōngyìngshāng quèrèn le, tāmen de qūdòng huì zài qī yuè dǐ tígōng xīn bǎnběn.",
+          "english": "We have confirmed with the supplier, they will provide a new driver version by end of July."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "那我把这些时间点更新到项目计划中，明天发给大家确认。",
+          "pinyin": "Nà wǒ bǎ zhèxiē shíjiān diǎn gēngxīn dào xiàngmù jìhuà zhōng, míngtiān fā gěi dàjiā quèrèn.",
+          "english": "Then I'll update these timelines into the project plan and send it to everyone for confirmation tomorrow."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "另外，CDD合规还需要准备文档，比如API参考和兼容性说明。",
+          "pinyin": "Lìngwài, CDD héguī hái xūyào zhǔnbèi wéndàng, bǐrú API cānkǎo hé jiānróngxìng shuōmíng.",
+          "english": "Additionally, CDD compliance also requires documentation preparation, such as API reference and compatibility notes."
+        },
+        {
+          "speaker": "总监",
+          "role": "Director",
+          "chinese": "文档工作由技术主管和测试主管共同负责，项目经理跟踪进度。好，今天就到这里。",
+          "pinyin": "Wéndàng gōngzuò yóu jìshù zhǔguǎn hé cèshì zhǔguǎn gòngtóng fùzé, xiàngmù jīnglǐ gēnzōng jìndù. Hǎo, jīntiān jiù dào zhèlǐ.",
+          "english": "Documentation is jointly handled by Tech Lead and Test Lead, with PM tracking progress. Okay, let's wrap up here."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "季度规划",
+          "pinyin": "jìdù guīhuà",
+          "english": "quarterly planning",
+          "context": "讨论Q3的季度规划"
+        },
+        {
+          "chinese": "CDD合规",
+          "pinyin": "CDD héguī",
+          "english": "CDD compliance",
+          "context": "汽车Android平台的CDD合规里程碑"
+        },
+        {
+          "chinese": "里程碑",
+          "pinyin": "lǐchéngbēi",
+          "english": "milestone",
+          "context": "设定里程碑"
+        },
+        {
+          "chinese": "回归测试",
+          "pinyin": "huíguī cèshì",
+          "english": "regression test",
+          "context": "进行全量回归测试"
+        },
+        {
+          "chinese": "第三方依赖",
+          "pinyin": "dì sān fāng yīlài",
+          "english": "third-party dependency",
+          "context": "考虑第三方依赖"
+        },
+        {
+          "chinese": "多用户模式",
+          "pinyin": "duō yònghù móshì",
+          "english": "multi-user mode",
+          "context": "多用户模式没有通过"
+        },
+        {
+          "chinese": "车辆信号抽象层",
+          "pinyin": "chēliàng xìnhào chōuxiàng céng",
+          "english": "vehicle signal abstraction layer",
+          "context": "搞定车辆信号抽象层"
+        },
+        {
+          "chinese": "必测项",
+          "pinyin": "bì cè xiàng",
+          "english": "mandatory test items",
+          "context": "完成所有CDD必测项"
+        }
+      ]
+    },
+    {
+      "id": "onboarding",
+      "title_en": "Onboarding a New Team Member",
+      "title_zh": "新人入职",
+      "category": "meeting",
+      "description_en": "A senior engineer is onboarding a new foreign team member, explaining the project structure, tools, and team processes.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "导师",
+          "role": "mentor",
+          "chinese": "欢迎加入团队！我先给你介绍一下项目结构。",
+          "pinyin": "Huānyíng jiārù tuánduì！Wǒ xiān gěi nǐ jièshào yīxià xiàngmù jiégòu。",
+          "english": "Welcome to the team! Let me first introduce the project structure."
+        },
+        {
+          "speaker": "新人",
+          "role": "new_hire",
+          "chinese": "谢谢！我之前看过一些文档，但还想了解整体架构。",
+          "pinyin": "Xièxie！Wǒ zhīqián kànguò yīxiē wéndàng, dàn hái xiǎng liǎojiě zhěngtǐ jiàgòu。",
+          "english": "Thanks! I've read some docs before, but I'd like to understand the overall architecture."
+        },
+        {
+          "speaker": "导师",
+          "role": "mentor",
+          "chinese": "我们主要用微服务架构，后端是Go，前端是React。",
+          "pinyin": "Wǒmen zhǔyào yòng wēifúwù jiàgòu, hòuduān shì Go, qiánduān shì React。",
+          "english": "We mainly use microservices architecture, backend is Go, frontend is React."
+        },
+        {
+          "speaker": "新人",
+          "role": "new_hire",
+          "chinese": "明白了。那代码仓库和CI/CD流程是怎样的？",
+          "pinyin": "Míngbai le。Nà dàimǎ cāngkù hé CI/CD liúchéng shì zěnyàng de？",
+          "english": "Got it. What about the code repository and CI/CD pipeline?"
+        },
+        {
+          "speaker": "导师",
+          "role": "mentor",
+          "chinese": "代码在GitLab上，每个微服务一个仓库。CI用GitLab CI，部署到Kubernetes。",
+          "pinyin": "Dàimǎ zài GitLab shàng, měi gè wēifúwù yī gè cāngkù。CI yòng GitLab CI, bùshǔ dào Kubernetes。",
+          "english": "Code is on GitLab, one repo per microservice. CI uses GitLab CI, deploys to Kubernetes."
+        },
+        {
+          "speaker": "新人",
+          "role": "new_hire",
+          "chinese": "好的。那团队开发流程呢？比如代码审查和发布周期。",
+          "pinyin": "Hǎo de。Nà tuánduì kāifā liúchéng ne？Bǐrú dàimǎ shěnchá hé fābù zhōuqī。",
+          "english": "Okay. What about the team development process? Like code review and release cycle."
+        },
+        {
+          "speaker": "导师",
+          "role": "mentor",
+          "chinese": "我们采用Git Flow，所有合并请求都需要至少两人审查。每周五发布一次。",
+          "pinyin": "Wǒmen cǎiyòng Git Flow, suǒyǒu hébìng qǐngqiú dōu xūyào zhìshǎo liǎng rén shěnchá。Měi zhōu wǔ fābù yī cì。",
+          "english": "We use Git Flow, all merge requests need at least two reviewers. Releases happen every Friday."
+        },
+        {
+          "speaker": "新人",
+          "role": "new_hire",
+          "chinese": "了解。那日常沟通用什么工具？",
+          "pinyin": "Liǎojiě。Nà rìcháng gōutōng yòng shénme gōngjù？",
+          "english": "Understood. What tools do we use for daily communication?"
+        },
+        {
+          "speaker": "导师",
+          "role": "mentor",
+          "chinese": "我们用Slack聊天，Jira管理任务，Confluence存文档。",
+          "pinyin": "Wǒmen yòng Slack liáotiān, Jira guǎnlǐ rènwù, Confluence cún wéndàng。",
+          "english": "We use Slack for chat, Jira for task management, and Confluence for docs."
+        },
+        {
+          "speaker": "新人",
+          "role": "new_hire",
+          "chinese": "好的。我什么时候可以开始看代码？",
+          "pinyin": "Hǎo de。Wǒ shénme shíhou kěyǐ kāishǐ kàn dàimǎ？",
+          "english": "Okay. When can I start looking at the code?"
+        },
+        {
+          "speaker": "导师",
+          "role": "mentor",
+          "chinese": "现在就可以。我先给你分配一个简单的任务，熟悉一下流程。",
+          "pinyin": "Xiànzài jiù kěyǐ。Wǒ xiān gěi nǐ fēnpèi yī gè jiǎndān de rènwù, shúxī yīxià liúchéng。",
+          "english": "You can start now. I'll assign you a simple task to get familiar with the process."
+        },
+        {
+          "speaker": "新人",
+          "role": "new_hire",
+          "chinese": "太好了，谢谢你的指导！",
+          "pinyin": "Tài hǎo le, xièxie nǐ de zhǐdǎo！",
+          "english": "Great, thanks for your guidance!"
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "微服务架构",
+          "pinyin": "wēifúwù jiàgòu",
+          "english": "microservices architecture",
+          "context": "我们主要用微服务架构。"
+        },
+        {
+          "chinese": "CI/CD",
+          "pinyin": "CI/CD",
+          "english": "continuous integration/continuous deployment",
+          "context": "那代码仓库和CI/CD流程是怎样的？"
+        },
+        {
+          "chinese": "代码审查",
+          "pinyin": "dàimǎ shěnchá",
+          "english": "code review",
+          "context": "所有合并请求都需要至少两人审查。"
+        },
+        {
+          "chinese": "合并请求",
+          "pinyin": "hébìng qǐngqiú",
+          "english": "merge request",
+          "context": "所有合并请求都需要至少两人审查。"
+        },
+        {
+          "chinese": "发布周期",
+          "pinyin": "fābù zhōuqī",
+          "english": "release cycle",
+          "context": "比如代码审查和发布周期。"
         }
       ]
     }
