@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Headphones,
   Play,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -51,12 +52,13 @@ import {
   ProgressView,
   StoriesView,
   BooksView,
+  ProfessionalView,
   SectionLoader,
 } from '@/views';
 
 import './App.css';
 
-export type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress' | 'audio' | 'stories' | 'books';
+export type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress' | 'audio' | 'stories' | 'books' | 'professional';
 type ListViewMode = 'paginated' | 'virtualized';
 export type ProgressTab = 'stats' | 'favorites' | 'grammar' | 'data';
 
@@ -88,7 +90,7 @@ interface PersistedUiSession {
 const isViewMode = (value: unknown): value is ViewMode => {
   return (
     typeof value === 'string' &&
-    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress', 'audio', 'stories', 'books'].includes(value)
+    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress', 'audio', 'stories', 'books', 'professional'].includes(value)
   );
 };
 
@@ -534,7 +536,7 @@ function App() {
       viewScrollPositionsRef.current[previousView] = window.scrollY;
     }
 
-    if (currentView !== 'detail' && currentView !== 'study' && currentView !== 'stories' && currentView !== 'books') {
+    if (currentView !== 'detail' && currentView !== 'study' && currentView !== 'stories' && currentView !== 'books' && currentView !== 'professional') {
       const targetScroll = viewScrollPositionsRef.current[currentView] || 0;
       requestAnimationFrame(() => {
         window.scrollTo({ top: targetScroll, behavior: 'auto' });
@@ -564,6 +566,9 @@ function App() {
     } else if (currentView === 'progress') {
       title = 'Learning Progress | OpenHSK';
       description = 'Track your HSK learning progress, goals, and favorite words.';
+    } else if (currentView === 'professional') {
+      title = 'Professional Chinese | OpenHSK';
+      description = 'Learn software engineering, Android, automotive, and workplace Chinese vocabulary and dialogues.';
     }
 
     document.title = title;
@@ -970,6 +975,15 @@ function App() {
               <Library className={`w-4 h-4 ${!bookDataset ? 'opacity-50' : ''}`} />
               Books
             </Button>
+            <Button
+              variant={currentView === 'professional' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setCurrentView('professional')}
+              className="gap-2"
+            >
+              <Briefcase className="w-4 h-4" />
+              Pro
+            </Button>
           </nav>
 
           {/* Actions */}
@@ -1139,6 +1153,7 @@ function App() {
             { view: 'audio' as const, label: 'Audio', icon: <Volume2 className="w-5 h-5" /> },
             { view: 'stories' as const, label: 'Stories', icon: <ScrollText className={`w-5 h-5 ${!storyDataset ? 'opacity-50' : ''}`} />, disabled: !storyDataset },
             { view: 'books' as const, label: 'Books', icon: <Library className={`w-5 h-5 ${!bookDataset ? 'opacity-50' : ''}`} />, disabled: !bookDataset },
+            { view: 'professional' as const, label: 'Pro', icon: <Briefcase className="w-5 h-5" /> },
           ] as Array<{ view: ViewMode; label: string; icon: React.ReactNode; disabled?: boolean }>).map((item) => {
             const active = currentView === item.view;
             return (
@@ -1335,6 +1350,9 @@ function App() {
                       onSetCurrentBookIndex={handleSetCurrentBookIndex}
                       onOpenDetailView={openDetailView}
                     />
+                  )}
+                  {currentView === 'professional' && (
+                    <ProfessionalView />
                   )}
                 </>
               )}

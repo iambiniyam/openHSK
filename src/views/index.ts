@@ -7,3 +7,4 @@ export { ProgressView } from './ProgressView';
 export { StoriesView } from './StoriesView';
 export { BooksView } from './BooksView';
 export { SectionLoader } from './SectionLoader';
+export { ProfessionalView } from './ProfessionalView';

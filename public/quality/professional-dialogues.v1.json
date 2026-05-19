@@ -1,0 +1,1098 @@
+{
+  "meta": {
+    "generated_at": "2026-05-19T01:56:20.403Z",
+    "model": "deepseek-chat",
+    "total_scenarios": 8,
+    "categories": [
+      "meeting",
+      "review",
+      "planning",
+      "technical",
+      "incident"
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "daily-standup",
+      "title_en": "Daily Standup",
+      "title_zh": "每日站会",
+      "category": "meeting",
+      "description_en": "A 5-minute daily standup in a Chinese automotive Android team. The team is working on CTS testing for a new IVI system.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "大家早上好，我们先看一下昨天的进展。",
+          "pinyin": "Dàjiā zǎoshang hǎo, wǒmen xiān kàn yīxià zuótiān de jìnzhǎn.",
+          "english": "Good morning everyone, let's first look at yesterday's progress."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "Test Engineer",
+          "chinese": "昨天我跑了CTS测试，发现三个新的失败用例，都是关于蓝牙的。",
+          "pinyin": "Zuótiān wǒ pǎo le CTS cèshì, fāxiàn sān gè xīn de shībài yònglì, dōu shì guānyú lányá de.",
+          "english": "Yesterday I ran the CTS tests and found three new failing cases, all related to Bluetooth."
+        },
+        {
+          "speaker": "安卓开发",
+          "role": "Android Developer",
+          "chinese": "蓝牙的failures我看到了，应该是HAL层的问题，我正在定位。",
+          "pinyin": "Lányá de failures wǒ kàn dào le, yīnggāi shì HAL céng de wèntí, wǒ zhèngzài dìngwèi.",
+          "english": "I saw the Bluetooth failures, they should be HAL layer issues, I'm debugging now."
+        },
+        {
+          "speaker": "测试负责人",
+          "role": "QA Lead",
+          "chinese": "这些蓝牙问题会影响CTS认证吗？我们需要尽快修复。",
+          "pinyin": "Zhèxiē lányá wèntí huì yǐngxiǎng CTS rènzhèng ma? Wǒmen xūyào jǐnkuài xiūfù.",
+          "english": "Will these Bluetooth issues affect CTS certification? We need to fix them as soon as possible."
+        },
+        {
+          "speaker": "安卓开发",
+          "role": "Android Developer",
+          "chinese": "影响不大，但最好在本周内提交patch。另外，我昨天修复了WiFi的crash问题，今天可以验证。",
+          "pinyin": "Yǐngxiǎng bù dà, dàn zuìhǎo zài běn zhōu nèi tíjiāo patch. Lìngwài, wǒ zuótiān xiūfù le WiFi de crash wèntí, jīntiān kěyǐ yànzhèng.",
+          "english": "Not much impact, but it's best to submit a patch within this week. Also, I fixed the WiFi crash issue yesterday, can be verified today."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "Test Engineer",
+          "chinese": "好的，我今天会重新跑WiFi相关的CTS用例，确认修复是否有效。",
+          "pinyin": "Hǎo de, wǒ jīntiān huì chóngxīn pǎo WiFi xiāngguān de CTS yònglì, quèrèn xiūfù shìfǒu yǒuxiào.",
+          "english": "Okay, I'll rerun the WiFi-related CTS test cases today to confirm the fix is effective."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "还有别的阻塞项吗？CTS的整体通过率现在是多少？",
+          "pinyin": "Hái yǒu bié de zǔsè xiàng ma? CTS de zhěngtǐ tōngguò lǜ xiànzài shì duōshǎo?",
+          "english": "Any other blockers? What's the overall CTS pass rate now?"
+        },
+        {
+          "speaker": "测试负责人",
+          "role": "QA Lead",
+          "chinese": "目前通过率是92%，目标是95%，主要卡在蓝牙和多媒体模块。",
+          "pinyin": "Mùqián tōngguò lǜ shì 92%, mùbiāo shì 95%, zhǔyào kǎ zài lányá hé duōméitǐ mókuài.",
+          "english": "Currently the pass rate is 92%, target is 95%, mainly stuck on Bluetooth and multimedia modules."
+        },
+        {
+          "speaker": "安卓开发",
+          "role": "Android Developer",
+          "chinese": "多媒体的问题我在看，可能是codec配置不对，今天下午能出结论。",
+          "pinyin": "Duōméitǐ de wèntí wǒ zài kàn, kěnéng shì codec pèizhì bù duì, jīntiān xiàwǔ néng chū jiélùn.",
+          "english": "I'm looking into the multimedia issues, might be a codec configuration problem, I'll have a conclusion this afternoon."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "好，大家按计划推进，下午再同步一下。散会。",
+          "pinyin": "Hǎo, dàjiā àn jìhuà tuījìn, xiàwǔ zài tóngbù yīxià. Sànhuì.",
+          "english": "Okay, everyone proceed as planned, let's sync up again this afternoon. Meeting adjourned."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "进展",
+          "pinyin": "jìnzhǎn",
+          "english": "progress",
+          "context": "used when discussing project status"
+        },
+        {
+          "chinese": "失败用例",
+          "pinyin": "shībài yònglì",
+          "english": "failing test case",
+          "context": "test cases that did not pass"
+        },
+        {
+          "chinese": "定位",
+          "pinyin": "dìngwèi",
+          "english": "to locate/debug",
+          "context": "finding the root cause of an issue"
+        },
+        {
+          "chinese": "认证",
+          "pinyin": "rènzhèng",
+          "english": "certification",
+          "context": "CTS certification for Android compatibility"
+        },
+        {
+          "chinese": "提交patch",
+          "pinyin": "tíjiāo patch",
+          "english": "submit a patch",
+          "context": "submitting code changes for review"
+        },
+        {
+          "chinese": "通过率",
+          "pinyin": "tōngguò lǜ",
+          "english": "pass rate",
+          "context": "percentage of tests passed"
+        },
+        {
+          "chinese": "阻塞项",
+          "pinyin": "zǔsè xiàng",
+          "english": "blocker",
+          "context": "issues blocking progress"
+        },
+        {
+          "chinese": "同步",
+          "pinyin": "tóngbù",
+          "english": "sync up",
+          "context": "to align on status or information"
+        }
+      ]
+    },
+    {
+      "id": "code-review",
+      "title_en": "Code Review",
+      "title_zh": "代码审查",
+      "category": "review",
+      "description_en": "A senior engineer is reviewing a junior developer's HAL integration code. They discuss error handling, logging, and CDD compliance.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "高级开发",
+          "role": "Senior Developer",
+          "chinese": "小王，我们来看一下你写的HAL集成代码。",
+          "pinyin": "Xiǎo Wáng, wǒmen lái kàn yīxià nǐ xiě de HAL jíchéng dàimǎ.",
+          "english": "Xiao Wang, let's take a look at the HAL integration code you wrote."
+        },
+        {
+          "speaker": "初级开发",
+          "role": "Junior Developer",
+          "chinese": "好的，我主要实现了设备初始化和数据读取功能。",
+          "pinyin": "Hǎo de, wǒ zhǔyào shíxiàn le shèbèi chūshǐhuà hé shùjù dúqǔ gōngnéng.",
+          "english": "Okay, I mainly implemented device initialization and data reading functions."
+        },
+        {
+          "speaker": "高级开发",
+          "role": "Senior Developer",
+          "chinese": "我看到你在初始化函数里没有处理错误返回码。",
+          "pinyin": "Wǒ kàndào nǐ zài chūshǐhuà hánshù lǐ méiyǒu chǔlǐ cuòwù fǎnhuí mǎ.",
+          "english": "I noticed that you didn't handle error return codes in the initialization function."
+        },
+        {
+          "speaker": "初级开发",
+          "role": "Junior Developer",
+          "chinese": "我以为只要返回成功就算完成了，没有考虑异常情况。",
+          "pinyin": "Wǒ yǐwéi zhǐyào fǎnhuí chénggōng jiù suàn wánchéng le, méiyǒu kǎolǜ yìcháng qíngkuàng.",
+          "english": "I thought it was done as long as it returned success, I didn't consider exceptional cases."
+        },
+        {
+          "speaker": "高级开发",
+          "role": "Senior Developer",
+          "chinese": "错误处理很重要，尤其是硬件交互，必须检查每个API的返回值。",
+          "pinyin": "Cuòwù chǔlǐ hěn zhòngyào, yóuqí shì yìngjiàn jiāohù, bìxū jiǎnchá měi gè API de fǎnhuí zhí.",
+          "english": "Error handling is very important, especially for hardware interaction. You must check the return value of every API."
+        },
+        {
+          "speaker": "初级开发",
+          "role": "Junior Developer",
+          "chinese": "明白了，我会加上错误检查并记录日志。",
+          "pinyin": "Míngbái le, wǒ huì jiā shàng cuòwù jiǎnchá bìng jìlù rìzhì.",
+          "english": "Got it, I'll add error checking and log the errors."
+        },
+        {
+          "speaker": "高级开发",
+          "role": "Senior Developer",
+          "chinese": "还有日志级别要规范，调试信息用DEBUG，错误用ERROR。",
+          "pinyin": "Hái yǒu rìzhì jíbié yào guīfàn, diàoshì xìnxī yòng DEBUG, cuòwù yòng ERROR.",
+          "english": "Also, log levels should be standardized: use DEBUG for debugging info and ERROR for errors."
+        },
+        {
+          "speaker": "初级开发",
+          "role": "Junior Developer",
+          "chinese": "好的，我会按照CDD规范修改日志格式。",
+          "pinyin": "Hǎo de, wǒ huì ànzhào CDD guīfàn xiūgǎi rìzhì géshì.",
+          "english": "Okay, I'll modify the log format according to CDD standards."
+        },
+        {
+          "speaker": "高级开发",
+          "role": "Senior Developer",
+          "chinese": "另外，数据读取部分要加超时机制，防止死锁。",
+          "pinyin": "Lìngwài, shùjù dúqǔ bùfen yào jiā chāoshí jīzhì, fángzhǐ sǐsuǒ.",
+          "english": "Also, the data reading part should add a timeout mechanism to prevent deadlocks."
+        },
+        {
+          "speaker": "初级开发",
+          "role": "Junior Developer",
+          "chinese": "谢谢指导，我改完后再请您审查一次。",
+          "pinyin": "Xièxiè zhǐdǎo, wǒ gǎi wán hòu zài qǐng nín shěnchá yī cì.",
+          "english": "Thank you for the guidance. After I make the changes, I'll ask you to review again."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "集成",
+          "pinyin": "jíchéng",
+          "english": "integration",
+          "context": "combining hardware abstraction layer with system"
+        },
+        {
+          "chinese": "初始化",
+          "pinyin": "chūshǐhuà",
+          "english": "initialization",
+          "context": "setting up hardware or software at start"
+        },
+        {
+          "chinese": "错误处理",
+          "pinyin": "cuòwù chǔlǐ",
+          "english": "error handling",
+          "context": "managing errors in code"
+        },
+        {
+          "chinese": "日志",
+          "pinyin": "rìzhì",
+          "english": "log",
+          "context": "recording events or errors"
+        },
+        {
+          "chinese": "调试",
+          "pinyin": "diàoshì",
+          "english": "debug",
+          "context": "finding and fixing bugs"
+        },
+        {
+          "chinese": "超时",
+          "pinyin": "chāoshí",
+          "english": "timeout",
+          "context": "time limit for an operation"
+        },
+        {
+          "chinese": "死锁",
+          "pinyin": "sǐsuǒ",
+          "english": "deadlock",
+          "context": "two processes waiting for each other"
+        },
+        {
+          "chinese": "审查",
+          "pinyin": "shěnchá",
+          "english": "review",
+          "context": "code review process"
+        }
+      ]
+    },
+    {
+      "id": "bug-triage",
+      "title_en": "Bug Triage Meeting",
+      "title_zh": "Bug分类会议",
+      "category": "meeting",
+      "description_en": "The team is triaging bugs from the latest CTS run. They need to prioritize, assign owners, and determine if issues are blockers.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "大家早上好，今天我们来开bug分类会议，重点看一下CTS的测试结果。",
+          "pinyin": "Dàjiā zǎoshang hǎo, jīntiān wǒmen lái kāi bug fēnlèi huìyì, zhòngdiǎn kàn yīxià CTS de cèshì jiéguǒ.",
+          "english": "Good morning everyone, today we'll have a bug triage meeting, focusing on the CTS test results."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "这次CTS跑下来，一共有15个失败用例，其中5个是新的，10个是之前就有的。",
+          "pinyin": "Zhè cì CTS pǎo xiàlái, yīgòng yǒu 15 gè shībài yònglì, qízhōng 5 gè shì xīn de, 10 gè shì zhīqián jiù yǒu de.",
+          "english": "In this CTS run, there are 15 failed test cases in total, 5 new and 10 pre-existing."
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "新失败的几个我看了，大部分是兼容性问题，有一个是内核崩溃，可能是blocker。",
+          "pinyin": "Xīn shībài de jǐ gè wǒ kàn le, dà bùfèn shì jiānróngxìng wèntí, yǒu yī gè shì nèihé bēngkuì, kěnéng shì blocker.",
+          "english": "I looked at the new failures, most are compatibility issues, one is a kernel crash, might be a blocker."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "QA Engineer",
+          "chinese": "那个内核崩溃我复现了，在特定设备上必现，log里看到是内存越界。",
+          "pinyin": "Nàgè nèihé bēngkuì wǒ fùxiàn le, zài tèdìng shèbèi shàng bìxiàn, log lǐ kàndào shì nèicún yuèjiè.",
+          "english": "I reproduced that kernel crash, it's reproducible on specific devices, the log shows memory out-of-bounds."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "那这个blocker需要立即处理，优先级设为P0，开发能接手吗？",
+          "pinyin": "Nà zhège blocker xūyào lìjí chǔlǐ, yōuxiān jí shè wéi P0, kāifā néng jiēshǒu ma?",
+          "english": "Then this blocker needs immediate handling, set priority to P0, can development take it?"
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "可以，我assign给我自己，今天开始查根因。",
+          "pinyin": "Kěyǐ, wǒ assign gěi wǒ zìjǐ, jīntiān kāishǐ chá gēnyīn.",
+          "english": "Sure, I'll assign it to myself and start root cause analysis today."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "剩下的新失败，有几个是UI显示问题，严重性不高，可以放到下一个sprint。",
+          "pinyin": "Shèngxià de xīn shībài, yǒu jǐ gè shì UI xiǎnshì wèntí, yánzhòngxìng bù gāo, kěyǐ fàng dào xià yī gè sprint.",
+          "english": "For the remaining new failures, a few are UI display issues, not high severity, can be deferred to the next sprint."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "QA Engineer",
+          "chinese": "那些旧的失败，有两个是环境问题，我已经重新跑了，通过了。",
+          "pinyin": "Nàxiē jiù de shībài, yǒu liǎng gè shì huánjìng wèntí, wǒ yǐjīng chóngxīn pǎo le, tōngguò le.",
+          "english": "For the old failures, two are environment issues, I reran them and they passed."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "好，那这两个可以关闭。其他旧的失败，有没有owner？",
+          "pinyin": "Hǎo, nà zhè liǎng gè kěyǐ guānbì. Qítā jiù de shībài, yǒu méiyǒu owner?",
+          "english": "Good, those two can be closed. For other old failures, do they have owners?"
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "有一个是多媒体相关的，之前assign给小王了，但他请假了，我来暂时接手。",
+          "pinyin": "Yǒu yī gè shì duōméitǐ xiāngguān de, zhīqián assign gěi Xiǎo Wáng le, dàn tā qǐngjià le, wǒ lái zànshí jiēshǒu.",
+          "english": "One is multimedia-related, previously assigned to Xiao Wang, but he's on leave, I'll take over temporarily."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "那这个bug的优先级调成P2，等小王回来再确认。",
+          "pinyin": "Nà zhège bug de yōuxiān jí tiáo chéng P2, děng Xiǎo Wáng huílái zài quèrèn.",
+          "english": "Then set this bug's priority to P2, confirm when Xiao Wang returns."
+        },
+        {
+          "speaker": "项目经理",
+          "role": "Project Manager",
+          "chinese": "好，今天的分类就到这里，大家按assign的bug去处理，明天站会同步进展。",
+          "pinyin": "Hǎo, jīntiān de fēnlèi jiù dào zhèlǐ, dàjiā àn assign de bug qù chǔlǐ, míngtiān zhànhuì tóngbù jìnzhǎn.",
+          "english": "OK, that's it for today's triage, everyone work on your assigned bugs, sync progress at tomorrow's standup."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "分类会议",
+          "pinyin": "fēnlèi huìyì",
+          "english": "triage meeting",
+          "context": "used to prioritize and assign bugs"
+        },
+        {
+          "chinese": "失败用例",
+          "pinyin": "shībài yònglì",
+          "english": "failed test case",
+          "context": "test cases that did not pass"
+        },
+        {
+          "chinese": "兼容性问题",
+          "pinyin": "jiānróngxìng wèntí",
+          "english": "compatibility issue",
+          "context": "problems related to compatibility"
+        },
+        {
+          "chinese": "内核崩溃",
+          "pinyin": "nèihé bēngkuì",
+          "english": "kernel crash",
+          "context": "critical system crash"
+        },
+        {
+          "chinese": "复现",
+          "pinyin": "fùxiàn",
+          "english": "reproduce",
+          "context": "to reproduce a bug"
+        },
+        {
+          "chinese": "根因",
+          "pinyin": "gēnyīn",
+          "english": "root cause",
+          "context": "underlying cause of a problem"
+        },
+        {
+          "chinese": "优先级",
+          "pinyin": "yōuxiān jí",
+          "english": "priority",
+          "context": "level of urgency for a bug"
+        },
+        {
+          "chinese": "站会",
+          "pinyin": "zhànhuì",
+          "english": "standup meeting",
+          "context": "daily team sync meeting"
+        }
+      ]
+    },
+    {
+      "id": "sprint-planning",
+      "title_en": "Sprint Planning",
+      "title_zh": "冲刺计划会",
+      "category": "planning",
+      "description_en": "The team is planning the next 2-week sprint. They estimate story points for CDD test case automation and IVI feature development.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "产品经理",
+          "role": "Product Owner",
+          "chinese": "好，我们开始冲刺计划会。这轮冲刺有两个重点：CDD测试用例自动化和IVI功能开发。",
+          "pinyin": "Hǎo, wǒmen kāishǐ chōngcì jìhuà huì. Zhè lún chōngcì yǒu liǎng gè zhòngdiǎn: CDD cèshì yònglì zìdònghuà hé IVI gōngnéng kāifā.",
+          "english": "Okay, let's start the sprint planning. This sprint has two focuses: CDD test case automation and IVI feature development."
+        },
+        {
+          "speaker": "技术主管",
+          "role": "Tech Lead",
+          "chinese": "我先评估一下CDD自动化的工作量。大概有20个测试用例需要覆盖，每个用例估计2个故事点。",
+          "pinyin": "Wǒ xiān pínggū yīxià CDD zìdònghuà de gōngzuò liàng. Dàgài yǒu 20 gè cèshì yònglì xūyào fùgài, měi gè yònglì gūjì 2 gè gùshì diǎn.",
+          "english": "Let me first estimate the workload for CDD automation. There are about 20 test cases to cover, each estimated at 2 story points."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "Test Engineer",
+          "chinese": "我觉得有些用例比较复杂，比如异常场景的处理，可能需要3个故事点。",
+          "pinyin": "Wǒ juéde yǒuxiē yònglì bǐjiào fùzá, bǐrú yìcháng chǎngjǐng de chǔlǐ, kěnéng xūyào 3 gè gùshì diǎn.",
+          "english": "I think some cases are more complex, like handling abnormal scenarios, which might need 3 story points."
+        },
+        {
+          "speaker": "技术主管",
+          "role": "Tech Lead",
+          "chinese": "好，那我们把复杂用例标记一下，重新估算。另外，IVI功能开发你们怎么看？",
+          "pinyin": "Hǎo, nà wǒmen bǎ fùzá yònglì biāojì yīxià, chóngxīn gūsuàn. Lìngwài, IVI gōngnéng kāifā nǐmen zěnme kàn?",
+          "english": "Okay, let's mark the complex cases and re-estimate. Also, what do you think about the IVI feature development?"
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "IVI这边有三个主要模块：用户界面、数据同步和通知推送。每个模块大概5个故事点。",
+          "pinyin": "IVI zhè biān yǒu sān gè zhǔyào mókuài: yònghù jièmiàn, shùjù tóngbù hé tōngzhī tuīsòng. Měi gè mókuài dàgài 5 gè gùshì diǎn.",
+          "english": "For IVI, there are three main modules: UI, data sync, and notification push. Each module is about 5 story points."
+        },
+        {
+          "speaker": "产品经理",
+          "role": "Product Owner",
+          "chinese": "那总共就是15个点，加上CDD的40个点，一共55个故事点。我们冲刺容量是50点，超了5点。",
+          "pinyin": "Nà zǒnggòng jiùshì 15 gè diǎn, jiāshàng CDD de 40 gè diǎn, yīgòng 55 gè gùshì diǎn. Wǒmen chōngcì róngliàng shì 50 diǎn, chāo le 5 diǎn.",
+          "english": "So that's 15 points total, plus 40 for CDD, making 55 story points. Our sprint capacity is 50 points, so we're 5 points over."
+        },
+        {
+          "speaker": "技术主管",
+          "role": "Tech Lead",
+          "chinese": "我们可以把CDD中优先级低的用例移到下一个冲刺，比如那些非核心功能的自动化。",
+          "pinyin": "Wǒmen kěyǐ bǎ CDD zhōng yōuxiān jí dī de yònglì yí dào xià yī gè chōngcì, bǐrú nàxiē fēi héxīn gōngnéng de zìdònghuà.",
+          "english": "We can move low-priority CDD cases to the next sprint, like automation for non-core features."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "Test Engineer",
+          "chinese": "同意，这样我们可以集中精力完成高优先级的自动化用例。",
+          "pinyin": "Tóngyì, zhèyàng wǒmen kěyǐ jízhōng jīnglì wánchéng gāo yōuxiān jí de zìdònghuà yònglì.",
+          "english": "Agreed, this way we can focus on completing high-priority automation cases."
+        },
+        {
+          "speaker": "产品经理",
+          "role": "Product Owner",
+          "chinese": "好，那调整后CDD是30个点，IVI是15个点，总共45点，在容量内。",
+          "pinyin": "Hǎo, nà tiáozhěng hòu CDD shì 30 gè diǎn, IVI shì 15 gè diǎn, zǒnggòng 45 diǎn, zài róngliàng nèi.",
+          "english": "Okay, so after adjustment, CDD is 30 points, IVI is 15 points, total 45 points, within capacity."
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "IVI的依赖项需要注意，数据同步模块需要后端API支持，后端团队能按时提供吗？",
+          "pinyin": "IVI de yīlài xiàng xūyào zhùyì, shùjù tóngbù mókuài xūyào hòuduān API zhīchí, hòuduān tuánduì néng ànshí tígōng ma?",
+          "english": "We need to watch the dependencies for IVI. The data sync module requires backend API support. Can the backend team deliver on time?"
+        },
+        {
+          "speaker": "技术主管",
+          "role": "Tech Lead",
+          "chinese": "我已经和后台团队确认过了，API会在冲刺第三天准备好，不影响我们的进度。",
+          "pinyin": "Wǒ yǐjīng hé hòutái tuánduì quèrèn guò le, API huì zài chōngcì dì sān tiān zhǔnbèi hǎo, bù yǐngxiǎng wǒmen de jìndù.",
+          "english": "I've confirmed with the backend team. The API will be ready by the third day of the sprint, so it won't affect our progress."
+        },
+        {
+          "speaker": "产品经理",
+          "role": "Product Owner",
+          "chinese": "很好，那我们就按这个计划执行。大家还有问题吗？没有的话，冲刺目标就确定了。",
+          "pinyin": "Hěn hǎo, nà wǒmen jiù àn zhège jìhuà zhíxíng. Dàjiā hái yǒu wèntí ma? Méiyǒu dehuà, chōngcì mùbiāo jiù quèdìng le.",
+          "english": "Great, let's proceed with this plan. Any questions? If not, the sprint goal is set."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "冲刺计划会",
+          "pinyin": "chōngcì jìhuà huì",
+          "english": "sprint planning meeting",
+          "context": "used at the start of the meeting"
+        },
+        {
+          "chinese": "故事点",
+          "pinyin": "gùshì diǎn",
+          "english": "story point",
+          "context": "used for estimating effort"
+        },
+        {
+          "chinese": "测试用例",
+          "pinyin": "cèshì yònglì",
+          "english": "test case",
+          "context": "used when discussing automation"
+        },
+        {
+          "chinese": "自动化",
+          "pinyin": "zìdònghuà",
+          "english": "automation",
+          "context": "used for CDD test automation"
+        },
+        {
+          "chinese": "优先级",
+          "pinyin": "yōuxiān jí",
+          "english": "priority",
+          "context": "used when deciding which tasks to move"
+        },
+        {
+          "chinese": "依赖项",
+          "pinyin": "yīlài xiàng",
+          "english": "dependency",
+          "context": "used for IVI module needing backend API"
+        },
+        {
+          "chinese": "冲刺容量",
+          "pinyin": "chōngcì róngliàng",
+          "english": "sprint capacity",
+          "context": "used to check if workload fits"
+        },
+        {
+          "chinese": "模块",
+          "pinyin": "mókuài",
+          "english": "module",
+          "context": "used for IVI components"
+        }
+      ]
+    },
+    {
+      "id": "cdd-discussion",
+      "title_en": "CDD Compliance Discussion",
+      "title_zh": "CDD合规讨论",
+      "category": "technical",
+      "description_en": "Engineers are discussing whether their device meets a specific CDD requirement about audio latency. They refer to the CDD document and CTS test results.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "我们来看一下CDD里关于音频延迟的要求。",
+          "pinyin": "Wǒmen lái kàn yīxià CDD lǐ guānyú yīnpín yánchí de yāoqiú.",
+          "english": "Let's look at the CDD requirements for audio latency."
+        },
+        {
+          "speaker": "音频工程师",
+          "role": "Audio Engineer",
+          "chinese": "根据CDD文档，音频输出延迟必须小于50毫秒。",
+          "pinyin": "Gēnjù CDD wéndàng, yīnpín shūchū yánchí bìxū xiǎoyú 50 háomiǎo.",
+          "english": "According to the CDD document, audio output latency must be less than 50 milliseconds."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "Test Engineer",
+          "chinese": "我们CTS测试的结果显示平均延迟是45毫秒，但有些场景下会超过50毫秒。",
+          "pinyin": "Wǒmen CTS cèshì de jiéguǒ xiǎnshì píngjūn yánchí shì 45 háomiǎo, dàn yǒuxiē chǎngjǐng xià huì chāoguò 50 háomiǎo.",
+          "english": "Our CTS test results show an average latency of 45ms, but it exceeds 50ms in some scenarios."
+        },
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "哪些场景？是蓝牙耳机还是扬声器？",
+          "pinyin": "Nǎxiē chǎngjǐng? Shì lányá ěrjī háishì yángshēngqì?",
+          "english": "Which scenarios? Bluetooth headphones or speakers?"
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "Test Engineer",
+          "chinese": "主要是蓝牙A2DP播放时，延迟会达到55毫秒。",
+          "pinyin": "Zhǔyào shì lányá A2DP bōfàng shí, yánchí huì dádào 55 háomiǎo.",
+          "english": "Mainly during Bluetooth A2DP playback, latency reaches 55ms."
+        },
+        {
+          "speaker": "音频工程师",
+          "role": "Audio Engineer",
+          "chinese": "那我们需要优化蓝牙音频路径，可能得调整缓冲区大小。",
+          "pinyin": "Nà wǒmen xūyào yōuhuà lányá yīnpín lùjìng, kěnéng děi tiáozhěng huǎnchōng qū dàxiǎo.",
+          "english": "Then we need to optimize the Bluetooth audio path, maybe adjust the buffer size."
+        },
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "但调整缓冲区会影响稳定性，我们需要确认CDD是否允许例外。",
+          "pinyin": "Dàn tiáozhěng huǎnchōng qū huì yǐngxiǎng wěndìngxìng, wǒmen xūyào quèrèn CDD shìfǒu yǔnxǔ lìwài.",
+          "english": "But adjusting the buffer may affect stability; we need to confirm if CDD allows exceptions."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "Test Engineer",
+          "chinese": "CDD里有一条备注，说非音乐场景下延迟可以放宽到80毫秒。",
+          "pinyin": "CDD lǐ yǒu yī tiáo bèizhù, shuō fēi yīnyuè chǎngjǐng xià yánchí kěyǐ fàngkuān dào 80 háomiǎo.",
+          "english": "There's a note in CDD saying latency can be relaxed to 80ms in non-music scenarios."
+        },
+        {
+          "speaker": "音频工程师",
+          "role": "Audio Engineer",
+          "chinese": "那我们可以把蓝牙A2DP归类为语音场景，这样延迟要求就满足了吗？",
+          "pinyin": "Nà wǒmen kěyǐ bǎ lányá A2DP guīlèi wéi yǔyīn chǎngjǐng, zhèyàng yánchí yāoqiú jiù mǎnzú le ma?",
+          "english": "Then can we classify Bluetooth A2DP as a voice scenario, so the latency requirement is met?"
+        },
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "这个归类需要和产品经理确认，但技术上可以先尝试优化缓冲区。",
+          "pinyin": "Zhège guīlèi xūyào hé chǎnpǐn jīnglǐ quèrèn, dàn jìshù shàng kěyǐ xiān chángshì yōuhuà huǎnchōng qū.",
+          "english": "This classification needs confirmation with the product manager, but technically we can try optimizing the buffer first."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "音频延迟",
+          "pinyin": "yīnpín yánchí",
+          "english": "audio latency",
+          "context": "key requirement in CDD"
+        },
+        {
+          "chinese": "毫秒",
+          "pinyin": "háomiǎo",
+          "english": "millisecond",
+          "context": "unit of latency measurement"
+        },
+        {
+          "chinese": "蓝牙",
+          "pinyin": "lányá",
+          "english": "Bluetooth",
+          "context": "wireless audio transmission"
+        },
+        {
+          "chinese": "缓冲区",
+          "pinyin": "huǎnchōng qū",
+          "english": "buffer",
+          "context": "memory area for data processing"
+        },
+        {
+          "chinese": "优化",
+          "pinyin": "yōuhuà",
+          "english": "optimize",
+          "context": "improve performance"
+        },
+        {
+          "chinese": "归类",
+          "pinyin": "guīlèi",
+          "english": "classify",
+          "context": "categorize into a scenario"
+        },
+        {
+          "chinese": "放宽",
+          "pinyin": "fàngkuān",
+          "english": "relax",
+          "context": "loosen requirements"
+        },
+        {
+          "chinese": "备注",
+          "pinyin": "bèizhù",
+          "english": "note",
+          "context": "annotation in document"
+        }
+      ]
+    },
+    {
+      "id": "test-results",
+      "title_en": "Test Results Review",
+      "title_zh": "测试结果评审",
+      "category": "review",
+      "description_en": "The test team is presenting weekly automation test results to the development team. They show pass rates, coverage metrics, and failed test analysis.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "这周的自动化测试结果出来了，整体通过率是92%。",
+          "pinyin": "Zhè zhōu de zìdònghuà cèshì jiéguǒ chūlái le, zhěngtǐ tōngguòlǜ shì 92%.",
+          "english": "This week's automation test results are out, with an overall pass rate of 92%."
+        },
+        {
+          "speaker": "自动化工程师",
+          "role": "Automation Engineer",
+          "chinese": "我们新增了50个测试用例，代码覆盖率从75%提升到了82%。",
+          "pinyin": "Wǒmen xīnzēng le 50 gè cèshì yònglì, dàimǎ fùgàilǜ cóng 75% tíshēng dào le 82%.",
+          "english": "We added 50 new test cases, and code coverage increased from 75% to 82%."
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "那失败的8%主要是什么原因？有没有我们开发需要修复的bug？",
+          "pinyin": "Nà shībài de 8% zhǔyào shì shénme yuányīn? Yǒu méiyǒu wǒmen kāifā xūyào xiūfù de bug?",
+          "english": "What are the main reasons for the 8% failures? Are there any bugs we developers need to fix?"
+        },
+        {
+          "speaker": "自动化工程师",
+          "role": "Automation Engineer",
+          "chinese": "大部分是环境问题，比如测试数据库连接超时。只有3个是真正的代码缺陷。",
+          "pinyin": "Dà bùfèn shì huánjìng wèntí, bǐrú cèshì shùjùkù liánjiē chāoshí. Zhǐyǒu 3 gè shì zhēnzhèng de dàimǎ quēxiàn.",
+          "english": "Most are environment issues, like test database connection timeouts. Only 3 are actual code defects."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "我已经把失败的测试用例和日志链接发到群里了，大家可以看一下。",
+          "pinyin": "Wǒ yǐjīng bǎ shībài de cèshì yònglì hé rìzhì liànjiē fā dào qún lǐ le, dàjiā kěyǐ kàn yīxià.",
+          "english": "I've already posted the failed test cases and log links in the group chat, everyone can take a look."
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "好的，我下午会排查那3个缺陷。另外，自动化测试的执行时间好像变长了？",
+          "pinyin": "Hǎo de, wǒ xiàwǔ huì páichá nà 3 gè quēxiàn. Lìngwài, zìdònghuà cèshì de zhíxíng shíjiān hǎoxiàng biàn cháng le?",
+          "english": "Okay, I'll investigate those 3 defects this afternoon. Also, the execution time of the automated tests seems longer?"
+        },
+        {
+          "speaker": "自动化工程师",
+          "role": "Automation Engineer",
+          "chinese": "对，因为新增了用例，而且有些用例需要等待异步任务完成。我们正在优化。",
+          "pinyin": "Duì, yīnwèi xīnzēng le yònglì, érqiě yǒuxiē yònglì xūyào děngdài yìbù rènwù wánchéng. Wǒmen zhèngzài yōuhuà.",
+          "english": "Yes, because we added new cases, and some cases need to wait for async tasks to complete. We're optimizing."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "另外，我们计划下周把冒烟测试集成到CI/CD流水线中，这样每次提交代码都会自动运行。",
+          "pinyin": "Lìngwài, wǒmen jìhuà xià zhōu bǎ màoyān cèshì jíchéng dào CI/CD liúshuǐxiàn zhōng, zhèyàng měi cì tíjiāo dàimǎ dōu huì zìdòng yùnxíng.",
+          "english": "Also, we plan to integrate smoke tests into the CI/CD pipeline next week, so they'll run automatically on every code commit."
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "这个好，能尽早发现问题。不过要确保冒烟测试执行时间不超过5分钟。",
+          "pinyin": "Zhège hǎo, néng jǐnzǎo fāxiàn wèntí. Búguò yào quèbǎo màoyān cèshì zhíxíng shíjiān bù chāoguò 5 fēnzhōng.",
+          "english": "That's good, it can catch issues early. But make sure the smoke test execution time doesn't exceed 5 minutes."
+        },
+        {
+          "speaker": "测试主管",
+          "role": "Test Lead",
+          "chinese": "没问题，我们会控制用例数量。今天的评审就到这里，大家有什么问题随时沟通。",
+          "pinyin": "Méi wèntí, wǒmen huì kòngzhì yònglì shùliàng. Jīntiān de píngshěn jiù dào zhèlǐ, dàjiā yǒu shénme wèntí suíshí gōutōng.",
+          "english": "No problem, we'll control the number of cases. That's all for today's review, feel free to communicate if you have any questions."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "通过率",
+          "pinyin": "tōngguòlǜ",
+          "english": "pass rate",
+          "context": "used in test results"
+        },
+        {
+          "chinese": "代码覆盖率",
+          "pinyin": "dàimǎ fùgàilǜ",
+          "english": "code coverage",
+          "context": "testing metric"
+        },
+        {
+          "chinese": "缺陷",
+          "pinyin": "quēxiàn",
+          "english": "defect",
+          "context": "software bug"
+        },
+        {
+          "chinese": "环境问题",
+          "pinyin": "huánjìng wèntí",
+          "english": "environment issue",
+          "context": "testing infrastructure problem"
+        },
+        {
+          "chinese": "日志",
+          "pinyin": "rìzhì",
+          "english": "log",
+          "context": "test logs"
+        },
+        {
+          "chinese": "异步任务",
+          "pinyin": "yìbù rènwù",
+          "english": "async task",
+          "context": "asynchronous operations"
+        },
+        {
+          "chinese": "冒烟测试",
+          "pinyin": "màoyān cèshì",
+          "english": "smoke test",
+          "context": "basic sanity test"
+        },
+        {
+          "chinese": "CI/CD流水线",
+          "pinyin": "CI/CD liúshuǐxiàn",
+          "english": "CI/CD pipeline",
+          "context": "continuous integration/deployment"
+        }
+      ]
+    },
+    {
+      "id": "production-issue",
+      "title_en": "Production Issue Response",
+      "title_zh": "线上问题处理",
+      "category": "incident",
+      "description_en": "A critical bug was found in the field that causes system crashes during OTA updates. The team is having an urgent call to coordinate the fix.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "值班工程师",
+          "role": "On-Call Engineer",
+          "chinese": "经理，线上发现一个严重bug，OTA升级会导致系统崩溃。",
+          "pinyin": "Jīnglǐ, xiànshàng fāxiàn yī gè yánzhòng bug, OTA shēngjí huì dǎozhì xìtǒng bēngkuì.",
+          "english": "Manager, a critical bug was found in production. The OTA update causes system crashes."
+        },
+        {
+          "speaker": "经理",
+          "role": "Manager",
+          "chinese": "立即拉群，开发、测试都进来，我们先评估影响范围。",
+          "pinyin": "Lìjí lā qún, kāifā, cèshì dōu jìnlái, wǒmen xiān pínggū yǐngxiǎng fànwéi.",
+          "english": "Create a group chat immediately, include dev and QA. Let's first assess the impact scope."
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "我看了日志，是OTA下载包校验时内存溢出导致的。",
+          "pinyin": "Wǒ kàn le rìzhì, shì OTA xiàzài bāo jiàoyàn shí nèicún yìchū dǎozhì de.",
+          "english": "I checked the logs. It's caused by a memory overflow during OTA package verification."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "QA",
+          "chinese": "这个场景我们测试覆盖过，但可能并发量大的时候才会触发。",
+          "pinyin": "Zhège chǎngjǐng wǒmen cèshì fùgài guò, dàn kěnéng bìngfā liàng dà de shíhou cái huì chùfā.",
+          "english": "We covered this scenario in testing, but it might only trigger under high concurrency."
+        },
+        {
+          "speaker": "经理",
+          "role": "Manager",
+          "chinese": "先回滚版本，暂停OTA推送，避免影响更多用户。",
+          "pinyin": "Xiān huígǔn bǎnběn, zàntíng OTA tuīsòng, bìmiǎn yǐngxiǎng gèng duō yònghù.",
+          "english": "Roll back the version first and pause OTA push to avoid affecting more users."
+        },
+        {
+          "speaker": "值班工程师",
+          "role": "On-Call Engineer",
+          "chinese": "收到，我已经在操作回滚，预计10分钟完成。",
+          "pinyin": "Shōudào, wǒ yǐjīng zài cāozuò huígǔn, yùjì 10 fēnzhōng wánchéng.",
+          "english": "Got it. I'm already rolling back, estimated completion in 10 minutes."
+        },
+        {
+          "speaker": "开发工程师",
+          "role": "Developer",
+          "chinese": "我这边定位到问题了，需要修改内存分配逻辑，大概2小时能出hotfix。",
+          "pinyin": "Wǒ zhè biān dìngwèi dào wèntí le, xūyào xiūgǎi nèicún fēnpèi luóji, dàgài 2 xiǎoshí néng chū hotfix.",
+          "english": "I've located the issue. I need to fix the memory allocation logic; a hotfix should be ready in about 2 hours."
+        },
+        {
+          "speaker": "测试工程师",
+          "role": "QA",
+          "chinese": "hotfix出来后我先做冒烟测试，然后全量回归。",
+          "pinyin": "Hotfix chūlái hòu wǒ xiān zuò màoyān cèshì, ránhòu quánliàng huíguī.",
+          "english": "After the hotfix is out, I'll run a smoke test first, then full regression."
+        },
+        {
+          "speaker": "经理",
+          "role": "Manager",
+          "chinese": "好，大家辛苦，这次事故要写复盘报告，分析根因和改进措施。",
+          "pinyin": "Hǎo, dàjiā xīnkǔ, zhè cì shìgù yào xiě fùpán bàogào, fēnxī gēnyīn hé gǎijìn cuòshī.",
+          "english": "Okay, everyone, good work. We need to write a postmortem report for this incident, analyzing root cause and improvement measures."
+        },
+        {
+          "speaker": "值班工程师",
+          "role": "On-Call Engineer",
+          "chinese": "回滚完成，线上已恢复，我继续监控一段时间。",
+          "pinyin": "Huígǔn wánchéng, xiànshàng yǐ huīfù, wǒ jìxù jiānkòng yī duàn shíjiān.",
+          "english": "Rollback complete, production is restored. I'll continue monitoring for a while."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "线上",
+          "pinyin": "xiànshàng",
+          "english": "production (environment)",
+          "context": "used to refer to the live system"
+        },
+        {
+          "chinese": "崩溃",
+          "pinyin": "bēngkuì",
+          "english": "crash",
+          "context": "system failure"
+        },
+        {
+          "chinese": "回滚",
+          "pinyin": "huígǔn",
+          "english": "rollback",
+          "context": "reverting to a previous version"
+        },
+        {
+          "chinese": "hotfix",
+          "pinyin": "hotfix",
+          "english": "hotfix",
+          "context": "urgent patch"
+        },
+        {
+          "chinese": "冒烟测试",
+          "pinyin": "màoyān cèshì",
+          "english": "smoke test",
+          "context": "preliminary testing"
+        },
+        {
+          "chinese": "复盘",
+          "pinyin": "fùpán",
+          "english": "postmortem",
+          "context": "incident review"
+        },
+        {
+          "chinese": "根因",
+          "pinyin": "gēnyīn",
+          "english": "root cause",
+          "context": "fundamental reason"
+        },
+        {
+          "chinese": "监控",
+          "pinyin": "jiānkòng",
+          "english": "monitor",
+          "context": "observing system status"
+        }
+      ]
+    },
+    {
+      "id": "architecture-review",
+      "title_en": "Architecture Design Review",
+      "title_zh": "架构设计评审",
+      "category": "technical",
+      "description_en": "The team is reviewing a new architecture for the IVI middleware layer. They discuss HAL design, API contracts, and performance requirements.",
+      "description_zh": "",
+      "lines": [
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "今天我们评审IVI中间层的架构设计，先从HAL层开始。",
+          "pinyin": "Jīntiān wǒmen píngshěn IVI zhōngjiān céng de jiàgòu shèjì, xiān cóng HAL céng kāishǐ.",
+          "english": "Today we review the IVI middleware layer architecture design, starting with the HAL layer."
+        },
+        {
+          "speaker": "HAL开发",
+          "role": "HAL Developer",
+          "chinese": "HAL层我们采用抽象接口设计，每个硬件模块对应一个HAL接口。",
+          "pinyin": "HAL céng wǒmen cǎiyòng chōuxiàng jiēkǒu shèjì, měi gè yìngjiàn mókuài duìyìng yī gè HAL jiēkǒu.",
+          "english": "For the HAL layer, we adopt an abstract interface design, each hardware module corresponds to one HAL interface."
+        },
+        {
+          "speaker": "框架工程师",
+          "role": "Framework Engineer",
+          "chinese": "API契约需要明确参数和返回值类型，确保跨平台兼容。",
+          "pinyin": "API qìyuē xūyào míngquè cānshù hé fǎnhuí zhí lèixíng, quèbǎo kuà píngtái jiānróng.",
+          "english": "API contracts need to specify parameter and return value types to ensure cross-platform compatibility."
+        },
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "性能需求方面，HAL层调用延迟必须控制在5毫秒以内。",
+          "pinyin": "Xìngnéng xūqiú fāngmiàn, HAL céng diàoyòng yánchí bìxū kòngzhì zài 5 háomiǎo yǐnèi.",
+          "english": "Regarding performance requirements, HAL layer call latency must be controlled within 5 milliseconds."
+        },
+        {
+          "speaker": "测试架构师",
+          "role": "Test Architect",
+          "chinese": "我们需要设计压力测试场景，模拟高并发访问HAL接口。",
+          "pinyin": "Wǒmen xūyào shèjì yālì cèshì chǎngjǐng, mónǐ gāo bìngfā fǎngwèn HAL jiēkǒu.",
+          "english": "We need to design stress test scenarios to simulate high-concurrency access to HAL interfaces."
+        },
+        {
+          "speaker": "HAL开发",
+          "role": "HAL Developer",
+          "chinese": "接口定义中，我们使用了回调机制来处理异步事件。",
+          "pinyin": "Jiēkǒu dìngyì zhōng, wǒmen shǐyòng le huídiào jīzhì lái chǔlǐ yìbù shìjiàn.",
+          "english": "In the interface definition, we use a callback mechanism to handle asynchronous events."
+        },
+        {
+          "speaker": "框架工程师",
+          "role": "Framework Engineer",
+          "chinese": "中间层需要提供统一的资源管理，避免内存泄漏。",
+          "pinyin": "Zhōngjiān céng xūyào tígōng tǒngyī de zīyuán guǎnlǐ, bìmiǎn nèicún xièlòu.",
+          "english": "The middleware layer needs to provide unified resource management to avoid memory leaks."
+        },
+        {
+          "speaker": "测试架构师",
+          "role": "Test Architect",
+          "chinese": "我会编写自动化测试用例，覆盖所有HAL接口的边界条件。",
+          "pinyin": "Wǒ huì biānxiě zìdòng huà cèshì yònglì, fùgài suǒyǒu HAL jiēkǒu de biānjiè tiáojiàn.",
+          "english": "I will write automated test cases covering all boundary conditions of HAL interfaces."
+        },
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "性能基准测试要在原型阶段完成，确保延迟达标。",
+          "pinyin": "Xìngnéng jīzhǔn cèshì yào zài yuánxíng jiēduàn wánchéng, quèbǎo yánchí dábiāo.",
+          "english": "Performance benchmark tests should be completed in the prototype phase to ensure latency meets targets."
+        },
+        {
+          "speaker": "HAL开发",
+          "role": "HAL Developer",
+          "chinese": "我们计划使用D-Bus作为进程间通信机制，但担心性能开销。",
+          "pinyin": "Wǒmen jìhuà shǐyòng D-Bus zuòwéi jìnchéng jiān tōngxìn jīzhì, dàn dānxīn xìngnéng kāixiāo.",
+          "english": "We plan to use D-Bus as the inter-process communication mechanism, but we are concerned about performance overhead."
+        },
+        {
+          "speaker": "框架工程师",
+          "role": "Framework Engineer",
+          "chinese": "可以考虑共享内存替代D-Bus，减少数据拷贝次数。",
+          "pinyin": "Kěyǐ kǎolǜ gòngxiǎng nèicún tìdài D-Bus, jiǎnshǎo shùjù kǎobèi cìshù.",
+          "english": "We can consider shared memory instead of D-Bus to reduce data copy times."
+        },
+        {
+          "speaker": "系统架构师",
+          "role": "System Architect",
+          "chinese": "好，那我们下周再评审更新后的设计方案。",
+          "pinyin": "Hǎo, nà wǒmen xià zhōu zài píngshěn gēngxīn hòu de shèjì fāng'àn.",
+          "english": "Okay, then we will review the updated design next week."
+        }
+      ],
+      "key_vocabulary": [
+        {
+          "chinese": "架构设计",
+          "pinyin": "jiàgòu shèjì",
+          "english": "architecture design",
+          "context": "used in the context of system design review"
+        },
+        {
+          "chinese": "抽象接口",
+          "pinyin": "chōuxiàng jiēkǒu",
+          "english": "abstract interface",
+          "context": "HAL layer design concept"
+        },
+        {
+          "chinese": "API契约",
+          "pinyin": "API qìyuē",
+          "english": "API contract",
+          "context": "specification of API parameters and types"
+        },
+        {
+          "chinese": "延迟",
+          "pinyin": "yánchí",
+          "english": "latency",
+          "context": "performance requirement for HAL calls"
+        },
+        {
+          "chinese": "压力测试",
+          "pinyin": "yālì cèshì",
+          "english": "stress test",
+          "context": "testing high-concurrency scenarios"
+        },
+        {
+          "chinese": "回调机制",
+          "pinyin": "huídiào jīzhì",
+          "english": "callback mechanism",
+          "context": "handling asynchronous events"
+        },
+        {
+          "chinese": "内存泄漏",
+          "pinyin": "nèicún xièlòu",
+          "english": "memory leak",
+          "context": "resource management issue"
+        },
+        {
+          "chinese": "进程间通信",
+          "pinyin": "jìnchéng jiān tōngxìn",
+          "english": "inter-process communication",
+          "context": "D-Bus vs shared memory discussion"
+        }
+      ]
+    }
+  ]
+}
