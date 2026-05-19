@@ -556,7 +556,7 @@ export const BookReader = ({
                           <Button
                             variant="ghost" size="icon"
                             className={`shrink-0 h-7 w-7 transition-opacity mt-0.5 ${
-                              isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                              isCurrent ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
                             }`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -584,15 +584,17 @@ export const BookReader = ({
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
                           {chapterWordUsage.map((usage, i) => (
-                            <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                            <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/50 hover:bg-muted cursor-pointer transition-colors border border-transparent hover:border-primary/20"
                               onClick={() => onWordClick?.(usage.hanzi)}>
-                              <div className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-base">
+                              <div className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-lg">
                                 {usage.hanzi}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="text-sm font-medium">{usage.hanzi}</div>
-                                <div className="text-xs text-muted-foreground">{usage.pinyin}</div>
-                                <div className="text-xs text-muted-foreground truncate">{usage.context_meaning}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">{usage.hanzi}</span>
+                                  <span className="text-xs text-muted-foreground">{usage.pinyin}</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground line-clamp-1">{usage.context_meaning}</div>
                               </div>
                             </div>
                           ))}

@@ -18,8 +18,9 @@ import {
   MessageCircle,
   Layers,
   Puzzle,
-  Info
+  Info,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { unifiedDictionary, type UnifiedEntry } from '@/services/unifiedDictionaryService';
 import { ttsService } from '@/services/ttsService';
 
@@ -172,24 +173,22 @@ export const WordDetail = ({
                     size="icon"
                     onClick={onToggleFavorite}
                     className={isFavorite ? 'bg-red-50 border-red-200' : ''}
+                    title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                   >
                     <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
+                    title="Copy to clipboard"
                     onClick={async () => {
-                      const shareData = {
-                        title: `OpenHSK — ${entry.hanzi}`,
-                        text: `${entry.hanzi} (${entry.pinyin}) — ${entry.definitions.join(', ')}`,
-                        url: window.location.href,
-                      };
+                      const text = `${entry.hanzi} (${entry.pinyin}) — ${entry.definitions.join('; ')}`;
                       try {
                         if (navigator.share) {
-                          await navigator.share(shareData);
+                          await navigator.share({ title: `OpenHSK — ${entry.hanzi}`, text, url: window.location.href });
                         } else if (navigator.clipboard) {
-                          await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-                          alert('Copied to clipboard!');
+                          await navigator.clipboard.writeText(`${text}\n${window.location.href}`);
+                          toast.success('Copied to clipboard');
                         }
                       } catch {
                         // User cancelled or share failed
@@ -295,25 +294,27 @@ export const WordDetail = ({
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.05 }}
                   >
-                    <Card className="p-3 hover:shadow-md transition-shadow cursor-pointer"
+                    <Card 
+                      className="p-0 overflow-hidden hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-primary/40"
                       onClick={() => {
                         const found = unifiedDictionary.getEntryByHanzi(char.char);
                         if (found) onRelatedWordClick(found);
                       }}
                     >
-                      <div className="text-center">
+                      <div className="p-3 text-center">
                         <div className="text-3xl sm:text-4xl font-bold mb-1">{char.char}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground truncate">{char.pinyin}</div>
+                        <div className="text-sm text-primary font-medium">{char.pinyin}</div>
+                      </div>
+                      <div className="px-3 pb-3 space-y-1">
                         {char.definition && (
-                          <div className="text-xs text-muted-foreground truncate mt-1 line-clamp-1">
+                          <div className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                             {char.definition}
                           </div>
                         )}
-                        {char.strokeCount && char.strokeCount > 0 && (
-                          <div className="text-xs text-primary mt-1">
-                            {char.strokeCount} strokes
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground/70 pt-1">
+                          {char.radical && <span>Radical: {char.radical}</span>}
+                          {char.strokeCount ? <span>{char.strokeCount} strokes</span> : null}
+                        </div>
                       </div>
                     </Card>
                   </motion.div>
@@ -518,52 +519,52 @@ export const WordDetail = ({
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Example Sentences</CardTitle>
+              <CardDescription>{entry.examples.length} example{entry.examples.length !== 1 ? 's' : ''} from HSK and Tatoeba</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {entry.examples.length > 0 ? (
                 entry.examples.map((example, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: Math.min(i * 0.06, 0.3) }}
+                    className="rounded-xl border border-border/60 hover:border-primary/30 hover:shadow-sm transition-all bg-card"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1 flex-1 min-w-0">
-                        <p className="text-lg font-medium break-words">{example.chinese}</p>
-                        <p className="text-sm text-primary break-words">{example.pinyin}</p>
-                        <p className="text-sm text-muted-foreground break-words">{example.english}</p>
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-lg font-medium break-words leading-relaxed">{example.chinese}</p>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => speak(example.chinese)}
+                          className="flex-shrink-0 h-8 w-8"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => speak(example.chinese)}
-                        className="flex-shrink-0"
-                      >
-                        <Volume2 className="w-4 h-4" />
-                      </Button>
+                      <p className="text-sm text-primary/80 break-words italic">{example.pinyin}</p>
+                      <p className="text-sm text-muted-foreground break-words leading-relaxed">{example.english}</p>
                     </div>
-                    <Badge variant="outline" className="mt-2 capitalize">
-                      {example.difficulty}
-                    </Badge>
-                    {example.source && (
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Source:{' '}
-                        {example.sourceUrl ? (
-                          <a
-                            href={example.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline hover:text-primary"
-                          >
-                            {example.source}
-                          </a>
-                        ) : (
-                          example.source
+                    <div className="px-4 py-2 border-t bg-muted/30 rounded-b-xl flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] capitalize h-5">
+                          {example.difficulty}
+                        </Badge>
+                        {example.source && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {example.sourceUrl ? (
+                              <a href={example.sourceUrl} target="_blank" rel="noreferrer" className="underline hover:text-primary">
+                                {example.source}
+                              </a>
+                            ) : (
+                              example.source
+                            )}
+                          </span>
                         )}
                       </div>
-                    )}
+                      <span className="text-[10px] text-muted-foreground/60 tabular-nums">#{i + 1}</span>
+                    </div>
                   </motion.div>
                 ))
               ) : (
@@ -576,10 +577,87 @@ export const WordDetail = ({
         </TabsContent>
 
         {/* Related Tab */}
-        <TabsContent value="related">
+        <TabsContent value="related" className="space-y-4">
+          {/* Synonyms & Antonyms */}
+          {(entry.synonyms.length > 0 || entry.antonyms.length > 0 || entry.wordFamily.length > 0) && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Related Words</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {entry.synonyms.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Synonyms</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {entry.synonyms.map((syn, i) => (
+                        <Button
+                          key={`syn-${i}`}
+                          variant="outline"
+                          size="sm"
+                          className="h-auto py-1.5 px-3 text-sm gap-1.5"
+                          onClick={() => {
+                            const found = unifiedDictionary.getEntryByHanzi(syn.hanzi);
+                            if (found) onRelatedWordClick(found);
+                          }}
+                        >
+                          <span className="font-medium">{syn.hanzi}</span>
+                          {syn.pinyin && <span className="text-xs text-muted-foreground">{syn.pinyin}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {entry.antonyms.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Antonyms</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {entry.antonyms.map((ant, i) => (
+                        <Button
+                          key={`ant-${i}`}
+                          variant="outline"
+                          size="sm"
+                          className="h-auto py-1.5 px-3 text-sm gap-1.5 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          onClick={() => {
+                            const found = unifiedDictionary.getEntryByHanzi(ant.hanzi);
+                            if (found) onRelatedWordClick(found);
+                          }}
+                        >
+                          <span className="font-medium">{ant.hanzi}</span>
+                          {ant.pinyin && <span className="text-xs text-muted-foreground">{ant.pinyin}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {entry.wordFamily.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Word Family</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {entry.wordFamily.map((w, i) => (
+                        <Button
+                          key={`fam-${i}`}
+                          variant="outline"
+                          size="sm"
+                          className="h-auto py-1.5 px-3 text-sm gap-1.5 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                          onClick={() => {
+                            const found = unifiedDictionary.getEntryByHanzi(w.hanzi);
+                            if (found) onRelatedWordClick(found);
+                          }}
+                        >
+                          <span className="font-medium">{w.hanzi}</span>
+                          {w.pinyin && <span className="text-xs text-muted-foreground">{w.pinyin}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Word Relationship Graph</CardTitle>
+              <CardTitle className="text-lg">Visual Graph</CardTitle>
               <CardDescription>
                 Click on any word to see details, double-click to open it
               </CardDescription>

@@ -10,6 +10,7 @@ import {
   Clock,
   Hash,
   BookX,
+  CheckCircle2,
 } from 'lucide-react';
 import { Empty, EmptyContent, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import { Button } from '@/components/ui/button';
@@ -325,9 +326,25 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
                             </div>
                           );
                         })()}
-                        <Button variant="outline" size="sm" className="text-xs gap-1.5 group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
-                          <BookOpen className="w-3.5 h-3.5" />
-                          {getBookProgress.has(book.book_id) && getBookProgress.get(book.book_id)!.completed > 0 ? 'Continue' : 'Start Reading'}
+                        <Button 
+                          variant={(() => {
+                            const prog = getBookProgress.get(book.book_id);
+                            if (prog && prog.completed === prog.total && prog.total > 0) return 'secondary';
+                            return 'default';
+                          })()} 
+                          size="sm" 
+                          className="text-xs gap-1.5 shrink-0"
+                        >
+                          {(() => {
+                            const prog = getBookProgress.get(book.book_id);
+                            if (prog && prog.completed === prog.total && prog.total > 0) {
+                              return <><CheckCircle2 className="w-3.5 h-3.5" />Completed</>;
+                            }
+                            if (prog && prog.completed > 0) {
+                              return <><BookOpen className="w-3.5 h-3.5" />Continue</>;
+                            }
+                            return <><BookOpen className="w-3.5 h-3.5" />Start Reading</>;
+                          })()}
                         </Button>
                       </div>
                     </div>

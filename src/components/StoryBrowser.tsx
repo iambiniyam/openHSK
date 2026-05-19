@@ -8,6 +8,7 @@ import {
   ArrowRight,
   X,
   Feather,
+  Clock,
 } from 'lucide-react';
 import { Empty, EmptyContent, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
+
 import type { StoryEntry, StoryDatasetMeta } from '@/types/stories';
 
 interface StoryBrowserProps {
@@ -190,6 +191,7 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredStories.map((story, i) => {
             const levelColor = hskLevelColors[story.hsk_level] || hskLevelColors[7];
+            const readingMinutes = Math.max(1, Math.round((story.word_count || 0) / 80));
 
             return (
               <motion.div
@@ -199,43 +201,51 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
                 transition={{ delay: Math.min(i * 0.03, 0.3), duration: 0.3 }}
               >
                 <Card
-                  className="cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group h-full"
+                  className="cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group h-full overflow-hidden border-l-4"
+                  style={{ borderLeftColor: `hsl(var(--primary) / ${0.3 + (story.hsk_level * 0.08)})` }}
                   onClick={() => onStorySelect(story, storyIndexMap.get(story.story_id) ?? 0)}
                 >
-                  <CardHeader>
+                  <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1 flex-1">
+                      <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="secondary" className={levelColor}>
                             {levelLabels[story.hsk_level] || `HSK ${story.hsk_level}`}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            <Hash className="w-3 h-3 mr-1" />
-                            {story.word_count} words
-                          </Badge>
-                          {story.coverage >= 0.95 && (
-                            <Badge variant="outline" className="text-xs text-green-600">
-                              {(story.coverage * 100).toFixed(0)}%
-                            </Badge>
-                          )}
+                          <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {readingMinutes} min
+                          </span>
                         </div>
-                        <CardTitle className="text-lg leading-tight line-clamp-2">
+                        <CardTitle className="text-xl leading-tight line-clamp-2 font-cn">
                           {story.title_chinese}
                         </CardTitle>
-                        <CardDescription className="line-clamp-1">
+                        <CardDescription className="line-clamp-1 text-sm">
                           {story.title_english}
                         </CardDescription>
                       </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0 mt-1 group-hover:translate-x-1 transition-transform" />
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                      {story.story_chinese.slice(0, 120)}...
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                      {story.story_chinese.slice(0, 100)}...
                     </p>
-                    {story.coverage < 0.9 && (
-                      <Progress value={story.coverage * 100} className="h-1 mt-3" />
-                    )}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Hash className="w-3 h-3" />
+                        {story.word_count} target words
+                      </span>
+                      {story.coverage >= 0.9 ? (
+                        <span className="text-green-600 font-medium">
+                          {(story.coverage * 100).toFixed(0)}% coverage
+                        </span>
+                      ) : (
+                        <span>{(story.coverage * 100).toFixed(0)}% coverage</span>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
