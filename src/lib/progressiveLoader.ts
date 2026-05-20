@@ -63,37 +63,12 @@ export async function loadDataProgressively(
         report('downloading');
 
         const response = await fetchWithCacheFallback(file.path);
-        const reader = response.body?.getReader();
-        if (reader && response.headers.get('content-length')) {
-          const stream = new ReadableStream({
-            start(controller) {
-              const pump = (): Promise<void> => {
-                return reader!.read().then(({ done, value }) => {
-                  if (done) { controller.close(); return; }
-                  fileLoaded += value.byteLength;
-                  phaseLoadedBytes += value.byteLength;
-                  report('downloading');
-                  controller.enqueue(value);
-                  return pump();
-                });
-              };
-              return pump();
-            },
-          });
-          const text = await new Response(stream).text();
-          fileLoaded = fileEstimateBytes;
-          phaseLoadedBytes = fileEstimateBytes;
-          report('parsing');
-          if (file.path.includes('part1.json')) results.hskPart1 = JSON.parse(text);
-          else results.hskPart2 = JSON.parse(text);
-        } else {
-          const text = await response.text();
-          fileLoaded = fileEstimateBytes;
-          phaseLoadedBytes = fileEstimateBytes;
-          report('parsing');
-          if (file.path.includes('part1.json')) results.hskPart1 = JSON.parse(text);
-          else results.hskPart2 = JSON.parse(text);
-        }
+        const text = await response.text();
+        fileLoaded = fileEstimateBytes;
+        phaseLoadedBytes += fileEstimateBytes;
+        report('parsing');
+        if (file.path.includes('part1.json')) results.hskPart1 = JSON.parse(text);
+        else results.hskPart2 = JSON.parse(text);
 
         report('complete');
       } catch (err) {
