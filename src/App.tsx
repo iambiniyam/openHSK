@@ -1,5 +1,4 @@
-import { lazy, useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
-import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
 import { 
   BarChart3, 
   Brain,
@@ -43,18 +42,17 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import type { ProgressUpdate } from '@/lib/progressiveLoader';
 import { buildDetailSequenceWindow } from '@/lib/detailSequence';
-import {
-  LandingView,
-  DashboardView,
-  BrowseView,
-  DetailView,
-  StudyView,
-  ProgressView,
-  StoriesView,
-  BooksView,
-  ProfessionalView,
-  SectionLoader,
-} from '@/views';
+import { SectionLoader } from '@/components/SectionLoader';
+
+const LandingView = lazy(() => import('@/views/LandingView').then((m) => ({ default: m.LandingView })));
+const DashboardView = lazy(() => import('@/views/DashboardView').then((m) => ({ default: m.DashboardView })));
+const BrowseView = lazy(() => import('@/views/BrowseView').then((m) => ({ default: m.BrowseView })));
+const DetailView = lazy(() => import('@/views/DetailView').then((m) => ({ default: m.DetailView })));
+const StudyView = lazy(() => import('@/views/StudyView').then((m) => ({ default: m.StudyView })));
+const ProgressView = lazy(() => import('@/views/ProgressView').then((m) => ({ default: m.ProgressView })));
+const StoriesView = lazy(() => import('@/views/StoriesView').then((m) => ({ default: m.StoriesView })));
+const BooksView = lazy(() => import('@/views/BooksView').then((m) => ({ default: m.BooksView })));
+const ProfessionalView = lazy(() => import('@/views/ProfessionalView').then((m) => ({ default: m.ProfessionalView })));
 
 import './App.css';
 
@@ -1190,16 +1188,9 @@ function App() {
 
       {/* Main Content */}
       <ErrorBoundary>
-        <MotionConfig reducedMotion="user">
         <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 overflow-x-hidden">
-          <AnimatePresence>
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.15 }}
-            >
+          <div key={currentView} className="animate-fade-in">
+            <Suspense fallback={<SectionLoader label="Loading..." />}>
               {currentView === 'landing' ? (
                 <LandingView totalWords={totalWords} onStartLearning={() => setCurrentView('dashboard')} onBrowseDictionary={() => setCurrentView('browse')} />
               ) : initError ? (
@@ -1356,10 +1347,9 @@ function App() {
                   )}
                 </>
               )}
-            </motion.div>
-          </AnimatePresence>
+            </Suspense>
+          </div>
         </main>
-        </MotionConfig>
       </ErrorBoundary>
 
       {/* Study Session Dialog */}

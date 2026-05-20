@@ -11,6 +11,12 @@ const TATOEBA_EXAMPLES_PATH = '/quality/hsk-tatoeba-examples.v1.json';
 const NETWORK_SEQUENTIAL_TYPES = new Set(['slow-2g', '2g']);
 let hskDatasetPromise: Promise<unknown[]> | null = null;
 
+export function seedHskDataset(data: unknown[]): void {
+  if (!hskDatasetPromise) {
+    hskDatasetPromise = Promise.resolve(data);
+  }
+}
+
 type NetworkConnection = {
   saveData?: boolean;
   effectiveType?: string;

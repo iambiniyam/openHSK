@@ -6,12 +6,14 @@ import {
   loadCedictEnrichmentDataset,
   loadGraphicsDatasetPartsText,
   loadHskDataset,
+  seedHskDataset,
   type CedictEnrichmentEntry,
   loadTatoebaExamplesDataset,
   type TatoebaExample,
 } from '@/lib/datasetLoader';
-import { loadDataProgressively, type ProgressCallback } from '@/lib/progressiveLoader';
+import { downloadPhases, type ProgressCallback } from '@/lib/progressiveLoader';
 import type { CedictEnrichmentDataset, TatoebaExamplesDataset } from '@/lib/datasetLoader';
+import { loadRuntimeCache, saveRuntimeCache } from '@/lib/runtimeCache';
 import { stripTones } from '@/lib/pinyin';
 
 // Unified Dictionary Entry - combines HSK + makemeahanzi + additional data
@@ -122,6 +124,7 @@ class UnifiedDictionaryService {
   private cedictEnrichment: Map<string, CedictEnrichmentEntry> = new Map();
   private tatoebaExamples: Map<string, ExampleSentence[]> = new Map();
   private loaded = false;
+  private tiersLoaded = 0;
   private loadPromise: Promise<void> | null = null;
   private loadAbortController: AbortController | null = null;
   private searchCache = new Map<string, SearchResult[]>();
@@ -141,19 +144,66 @@ class UnifiedDictionaryService {
    * Reports download progress per file so the UI can show a loading screen
    * with actual progress bars. Still returns when everything is ready.
    */
+  /**
+   * Initialize with progressive loading. Returns when tier 1 (vocab) is ready.
+   * Remaining tiers (characters, graphics, enrichment, examples) load in background.
+   * Check `getTiersLoaded()` or `isTierReady(tier)` for progressive feature availability.
+   */
   async initializeWithProgress(onProgress: ProgressCallback): Promise<void> {
     if (this.loaded) return;
-    if (this.loadPromise) return this.loadPromise;
+    if (this.loadPromise) {
+      // If already loading, wait for tier 1
+      if (this.tiersLoaded >= 1) return;
+      await this.waitForTier(1);
+      return;
+    }
+
+    // Try IndexedDB cache first — instant restore on repeat visits
+    if (await this.tryLoadFromCache()) {
+      seedHskDataset(this.hskData);
+      this.loaded = true;
+      this.tiersLoaded = 5;
+      onProgress({
+        phaseId: 'done',
+        phaseLabel: 'Ready',
+        phaseIndex: 0,
+        totalPhases: 1,
+        filePath: '',
+        fileProgress: 100,
+        phaseProgress: 100,
+        overallProgress: 100,
+        bytesLoaded: 0,
+        bytesTotal: 0,
+        status: 'complete',
+      });
+      return;
+    }
 
     this.loadAbortController = new AbortController();
+    // Start two-stage loading; resolves after tier 1, continues in background
     this.loadPromise = this.loadAllDataProgressive(onProgress, this.loadAbortController.signal);
-    return this.loadPromise;
+    // Wait for tier 1 before returning
+    await this.waitForTier(1);
   }
 
   abortLoad(): void {
     this.loadAbortController?.abort();
     this.loadAbortController = null;
     this.loadPromise = null;
+  }
+
+  /** Returns how many tiers are fully loaded (0 = none, 1 = vocab, 5 = everything) */
+  getTiersLoaded(): number { return this.tiersLoaded; }
+
+  /** Check if a specific data tier is ready (1=vocab, 2=characters, 3=graphics, 4=enrichment, 5=examples) */
+  isTierReady(tier: number): boolean {
+    return this.tiersLoaded >= tier || this.loaded;
+  }
+
+  private async waitForTier(target: number): Promise<void> {
+    while (this.tiersLoaded < target && !this.loaded) {
+      await new Promise(r => setTimeout(r, 50));
+    }
   }
 
   private async loadAllData(): Promise<void> {
@@ -226,6 +276,8 @@ class UnifiedDictionaryService {
       if (!shouldLoadTatoebaExamples) {
         console.log('Skipped Tatoeba examples on low-bandwidth connection.');
       }
+
+      this.persistToCache();
     } catch (error) {
       console.error('Failed to load dictionary:', error);
       throw error;
@@ -239,29 +291,48 @@ class UnifiedDictionaryService {
     console.time('Dictionary Progressive Load');
     
     try {
-      const data = await loadDataProgressively(onProgress, signal);
+      // ── Stage 1: Download vocab only (phases 0-1) ──
+      const vocabData = await downloadPhases(0, 1, onProgress, signal);
 
-      this.hskData = [...(data.hskPart1 as HSKEntry[]), ...(data.hskPart2 as HSKEntry[])];
-      await this.parseCharacterData(data.dictionaryText);
-      for (const graphicsPart of data.graphicsParts) {
-        await this.parseGraphicsData(graphicsPart);
+      this.hskData = [...(vocabData.hskPart1 as HSKEntry[]), ...(vocabData.hskPart2 as HSKEntry[])];
+
+      // Build entries from just HSK data (no charData, graphics, enrichment, examples yet)
+      await this.buildUnifiedEntries();
+      await this.buildIndexes();
+
+      this.tiersLoaded = 1;
+      // initializeWithProgress's waitForTier(1) will now resolve, letting the app become interactive
+
+      // ── Stage 2: Download remaining data (phases 2-5) ──
+      const remainingData = await downloadPhases(2, 5, onProgress, signal, new Set(['stroke-graphics']));
+
+      // Kick off graphics download in background while we process enrichment
+      this.ensureGraphicsLoaded().catch(() => {});
+
+      // Parse character data and enrich entries
+      if (remainingData.dictionaryText) {
+        await this.parseCharacterData(remainingData.dictionaryText);
+        await this.enrichWithCharacterData();
+        this.tiersLoaded = 2;
       }
 
-      this.cedictEnrichment.clear();
-      const cedictDataset = data.cedictDataset as CedictEnrichmentDataset | null;
+      // CEDICT enrichment
+      const cedictDataset = remainingData.cedictDataset as CedictEnrichmentDataset | null;
       if (cedictDataset?.entries?.length) {
+        this.cedictEnrichment.clear();
         for (const entry of cedictDataset.entries) {
           this.cedictEnrichment.set(entry.hanzi, entry);
         }
+        await this.enrichWithCedict();
+        this.tiersLoaded = 4;
       }
 
-      this.tatoebaExamples.clear();
-      const tatoebaDataset = data.tatoebaDataset as TatoebaExamplesDataset | null;
+      // Tatoeba examples
+      const tatoebaDataset = remainingData.tatoebaDataset as TatoebaExamplesDataset | null;
       if (tatoebaDataset?.words?.length) {
+        this.tatoebaExamples.clear();
         for (const wordEntry of tatoebaDataset.words) {
-          if (!wordEntry?.hanzi || !Array.isArray(wordEntry.examples) || wordEntry.examples.length === 0) {
-            continue;
-          }
+          if (!wordEntry?.hanzi || !Array.isArray(wordEntry.examples) || wordEntry.examples.length === 0) continue;
 
           const examples = wordEntry.examples
             .filter((example: TatoebaExample): example is TatoebaExample => {
@@ -280,14 +351,10 @@ class UnifiedDictionaryService {
             this.tatoebaExamples.set(wordEntry.hanzi, examples);
           }
         }
+        await this.enrichWithExamples();
+        this.tiersLoaded = 5;
       }
-      
-      // Build unified entries
-      await this.buildUnifiedEntries();
-      
-      // Build search indexes
-      await this.buildIndexes();
-      
+
       this.loaded = true;
       console.timeEnd('Dictionary Progressive Load');
       console.log(`Loaded ${this.entries.size} unified entries`);
@@ -295,9 +362,104 @@ class UnifiedDictionaryService {
       console.log(`Graphics data: ${this.graphicsData.size} entries`);
       console.log(`CEDICT enrichment: ${this.cedictEnrichment.size} entries`);
       console.log(`Tatoeba example coverage: ${this.tatoebaExamples.size} entries`);
+
+      this.persistToCache();
     } catch (error) {
       console.error('Failed to load dictionary:', error);
       throw error;
+    }
+  }
+
+  private async enrichWithCharacterData(): Promise<void> {
+    const entries = Array.from(this.entries.values());
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const charDataList = entry.hanzi.split('').map(char => this.charData.get(char));
+      const mainChar = charDataList[0];
+
+      if (mainChar) {
+        entry.strokeCount = mainChar.matches?.length || entry.hanzi.length;
+        if (entry.hanzi.length === 1) {
+          entry.radical = mainChar.radical;
+          entry.decomposition = mainChar.decomposition;
+          entry.etymology = mainChar.etymology;
+        }
+      }
+
+      const breakdown = this.buildCharacterBreakdown(entry.hanzi);
+      if (breakdown?.length > 0) {
+        entry.characterBreakdown = breakdown;
+      }
+
+      if (i % 500 === 499) await yieldToMain();
+    }
+  }
+
+  private async enrichWithCedict(): Promise<void> {
+    const entries = Array.from(this.entries.values());
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const cedict = this.cedictEnrichment.get(entry.hanzi);
+      if (cedict) {
+        entry.definitions = this.mergeDefinitions(entry.definitions, cedict.definitions);
+        entry.definitionSources = ['hsk', 'cedict'];
+        entry.qualityScore = cedict.qualityScore ?? entry.qualityScore;
+
+        const alt = cedict.pinyin.filter(p => p !== entry.pinyin);
+        if (alt.length > 0) {
+          entry.altPinyin = alt;
+        }
+
+        // Rebuild definition index with new definitions
+        for (const def of entry.definitions) {
+          const words = def.toLowerCase().split(/\s+/);
+          for (const word of words) {
+            const cleanWord = word.replace(/[^a-z]/g, '');
+            if (cleanWord.length > 2) {
+              const existingDef = this.definitionIndex.get(cleanWord) || [];
+              if (!existingDef.includes(entry.id)) {
+                existingDef.push(entry.id);
+                this.definitionIndex.set(cleanWord, existingDef);
+              }
+            }
+          }
+        }
+      }
+      if (i % 500 === 499) await yieldToMain();
+    }
+  }
+
+  private async enrichWithExamples(): Promise<void> {
+    const entries = Array.from(this.entries.values());
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const externalExamples = this.tatoebaExamples.get(entry.hanzi);
+      if (externalExamples?.length) {
+        entry.examples = this.mergeExamples(entry.examples, externalExamples);
+      }
+      if (i % 500 === 499) await yieldToMain();
+    }
+  }
+
+  private _graphicsLoadPromise: Promise<void> | null = null;
+
+  /** Ensure stroke graphics data is loaded (loaded on demand, not at startup) */
+  async ensureGraphicsLoaded(): Promise<void> {
+    if (this.graphicsData.size > 0) return;
+    if (this._graphicsLoadPromise) return this._graphicsLoadPromise;
+    this._graphicsLoadPromise = this._loadGraphicsData();
+    return this._graphicsLoadPromise;
+  }
+
+  private async _loadGraphicsData(): Promise<void> {
+    try {
+      const parts = await loadGraphicsDatasetPartsText();
+      for (const g of parts) {
+        await this.parseGraphicsData(g);
+      }
+    } catch (err) {
+      console.error('Failed to load graphics data:', err);
+      this._graphicsLoadPromise = null;
     }
   }
 
@@ -319,6 +481,56 @@ class UnifiedDictionaryService {
     return connection.effectiveType
       ? !LOW_BANDWIDTH_TYPES.has(connection.effectiveType)
       : true;
+  }
+
+  private async tryLoadFromCache(): Promise<boolean> {
+    try {
+      const cache = await loadRuntimeCache();
+      if (!cache) return false;
+
+      this.entries = new Map(cache.entries as [string, UnifiedEntry][]);
+      this.hanziIndex = new Map(cache.hanziIndex);
+      this.pinyinIndex = new Map(cache.pinyinIndex);
+      this.definitionIndex = new Map(cache.definitionIndex);
+      this.hskData = cache.hskData as HSKEntry[];
+      this.charData = new Map(cache.charData as [string, CharacterDictionaryData][]);
+      this.graphicsData = new Map(cache.graphicsData as [string, CharacterGraphics][]);
+      this.cedictEnrichment = new Map(cache.cedictEnrichment as [string, CedictEnrichmentEntry][]);
+      this.tatoebaExamples = new Map(cache.tatoebaExamples as [string, ExampleSentence[]][]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private getCacheVersion(): string {
+    const files = [
+      '/hsk3.0.part1.json',
+      '/hsk3.0.part2.json',
+      '/dictionary.txt',
+      '/graphics.part1.txt',
+      '/graphics.part2.txt',
+      '/quality/hsk-cedict-enrichment.v1.json',
+      '/quality/hsk-tatoeba-examples.v1.json',
+    ];
+    return `1|${files.join(',')}`;
+  }
+
+  private async persistToCache(): Promise<void> {
+    saveRuntimeCache({
+      version: this.getCacheVersion(),
+      entries: Array.from(this.entries.entries()),
+      hanziIndex: Array.from(this.hanziIndex.entries()),
+      pinyinIndex: Array.from(this.pinyinIndex.entries()),
+      definitionIndex: Array.from(this.definitionIndex.entries()),
+      hskData: this.hskData,
+      charData: Array.from(this.charData.entries()),
+      graphicsData: Array.from(this.graphicsData.entries()),
+      cedictEnrichment: Array.from(this.cedictEnrichment.entries()),
+      tatoebaExamples: Array.from(this.tatoebaExamples.entries()),
+    }).then((ok: boolean) => {
+      if (ok) console.log('Dictionary cached to IndexedDB');
+    });
   }
 
   private async parseCharacterData(text: string): Promise<void> {
@@ -472,7 +684,7 @@ class UnifiedDictionaryService {
     return Array.from(dedup.values()).slice(0, 12);
   }
 
-  private buildCharacterBreakdown(hanzi: string): UnifiedEntry['characterBreakdown'] {
+  private buildCharacterBreakdown(hanzi: string): NonNullable<UnifiedEntry['characterBreakdown']> {
     if (hanzi.length <= 1) return [];
     
     const breakdown: NonNullable<UnifiedEntry['characterBreakdown']> = [];

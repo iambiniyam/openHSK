@@ -85,10 +85,13 @@ const PHASES: LoadPhase[] = [
   },
 ];
 
-const TOTAL_ESTIMATED_MB = PHASES.reduce(
-  (sum, p) => sum + p.files.reduce((fSum, f) => fSum + f.sizeEstimateMb, 0),
-  0,
-);
+function totalEstimateForPhases(startIdx: number, endIdx: number): number {
+  let sum = 0;
+  for (let i = startIdx; i <= endIdx; i++) {
+    sum += PHASES[i].files.reduce((fSum, f) => fSum + f.sizeEstimateMb, 0);
+  }
+  return sum;
+}
 
 async function fetchWithProgress(
   path: string,
@@ -132,18 +135,17 @@ async function fetchWithProgress(
   });
 }
 
-export async function loadDataProgressively(
-  onProgress: ProgressCallback,
-  signal?: AbortSignal,
-): Promise<{
+export interface PartialResult {
   hskPart1: unknown[];
   hskPart2: unknown[];
   dictionaryText: string;
   graphicsParts: string[];
   cedictDataset: unknown | null;
   tatoebaDataset: unknown | null;
-}> {
-  const results = {
+}
+
+function makeResults(): PartialResult {
+  return {
     hskPart1: [] as unknown[],
     hskPart2: [] as unknown[],
     dictionaryText: '',
@@ -151,13 +153,39 @@ export async function loadDataProgressively(
     cedictDataset: null as unknown | null,
     tatoebaDataset: null as unknown | null,
   };
+}
 
+export async function loadDataProgressively(
+  onProgress: ProgressCallback,
+  signal?: AbortSignal,
+): Promise<PartialResult> {
+  return downloadPhases(0, PHASES.length - 1, onProgress, signal);
+}
+
+/**
+ * Download phases from `startIdx` to `endIdx` inclusive.
+ * Optionally skip specific phase IDs (e.g., 'stroke-graphics' for on-demand loading).
+ * Returns a PartialResult with data merged across all requested phases.
+ */
+export async function downloadPhases(
+  startIdx: number,
+  endIdx: number,
+  onProgress: ProgressCallback,
+  signal?: AbortSignal,
+  excludePhaseIds?: Set<string>,
+): Promise<PartialResult> {
+  const results = makeResults();
+  const totalEstMb = totalEstimateForPhases(startIdx, endIdx);
   let completedBytes = 0;
 
-  for (let phaseIdx = 0; phaseIdx < PHASES.length; phaseIdx++) {
+  for (let i = startIdx; i <= endIdx; i++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
 
-    const phase = PHASES[phaseIdx];
+    const phase = PHASES[i];
+    if (excludePhaseIds?.has(phase.id)) {
+      completedBytes += phase.files.reduce((s, f) => s + f.sizeEstimateMb * 1024 * 1024, 0);
+      continue;
+    }
     const phaseTotalBytes = phase.files.reduce(
       (sum, f) => sum + f.sizeEstimateMb * 1024 * 1024,
       0,
@@ -178,22 +206,21 @@ export async function loadDataProgressively(
         const phaseProgress = phaseTotalBytes > 0
           ? Math.min(100, (phaseLoadedBytes / phaseTotalBytes) * 100)
           : 100;
-        const overallProgress = Math.min(
-          100,
-          (completedBytes / (TOTAL_ESTIMATED_MB * 1024 * 1024)) * 100,
-        );
+        const overallProgress = totalEstMb > 0
+          ? Math.min(100, ((completedBytes + fileLoaded) / (totalEstMb * 1024 * 1024)) * 100)
+          : 100;
 
         onProgress({
           phaseId: phase.id,
           phaseLabel: phase.label,
-          phaseIndex: phaseIdx,
-          totalPhases: PHASES.length,
+          phaseIndex: i,
+          totalPhases: endIdx - startIdx + 1,
           filePath: file.path,
           fileProgress,
           phaseProgress,
           overallProgress,
           bytesLoaded: completedBytes + fileLoaded,
-          bytesTotal: TOTAL_ESTIMATED_MB * 1024 * 1024,
+          bytesTotal: totalEstMb * 1024 * 1024,
           status,
         });
       };
@@ -234,7 +261,6 @@ export async function loadDataProgressively(
         reportProgress('complete');
       } catch (err) {
         if (phase.optional) {
-          // Optional phases can fail gracefully
           fileLoaded = fileEstimateBytes;
           reportProgress('complete');
         } else {
@@ -255,5 +281,5 @@ export function getLoadingPhases(): LoadPhase[] {
 }
 
 export function getTotalEstimatedSizeMb(): number {
-  return TOTAL_ESTIMATED_MB;
+  return totalEstimateForPhases(0, PHASES.length - 1);
 }

@@ -15,7 +15,13 @@ class MakeMeAHanziService {
   private ownLoadPromise: Promise<void> | null = null;
 
   async loadData(): Promise<void> {
-    // Fast path: unified dictionary already has everything
+    // If unified dictionary has character data, use it and just ensure graphics
+    if (unifiedDictionary.isTierReady(2)) {
+      await unifiedDictionary.ensureGraphicsLoaded();
+      return;
+    }
+
+    // If unified dict is fully loaded, delegate
     if (unifiedDictionary.isLoaded()) return;
 
     // Start unified dictionary loading in background (if not already started)
