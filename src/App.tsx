@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
+import { useState, useEffect, useCallback, useMemo, useDeferredValue, useRef } from 'react';
 import { 
   Settings,
   Sun,
@@ -49,7 +49,6 @@ import { ProfessionalView } from '@/views/ProfessionalView';
 import './App.css';
 
 export type ViewMode = 'landing' | 'browse' | 'detail' | 'audio' | 'stories' | 'books' | 'professional';
-type ListViewMode = 'paginated' | 'virtualized';
 
 const APP_SESSION_STORAGE_KEY = 'openhsk.ui-session.v1';
 const MAX_PERSISTED_DETAIL_SEQUENCE = 180;
@@ -62,7 +61,6 @@ interface PersistedUiSession {
   searchQuery: string;
   selectedLevel: number | 'all' | '7-9';
   selectedPOS: string;
-  listViewMode: ListViewMode;
   browsePage: number;
   selectedEntryId?: string;
   detailSequenceIds: string[];
@@ -75,10 +73,6 @@ const isViewMode = (value: unknown): value is ViewMode => {
     typeof value === 'string' &&
     ['landing', 'browse', 'detail', 'audio', 'stories', 'books', 'professional'].includes(value)
   );
-};
-
-const isListViewMode = (value: unknown): value is ListViewMode => {
-  return typeof value === 'string' && ['paginated', 'virtualized'].includes(value);
 };
 
 const normalizeSelectedLevel = (value: unknown): number | 'all' | '7-9' => {
@@ -123,7 +117,6 @@ const loadPersistedUiSession = (): PersistedUiSession | null => {
       searchQuery: typeof parsed.searchQuery === 'string' ? parsed.searchQuery : '',
       selectedLevel: normalizeSelectedLevel(parsed.selectedLevel),
       selectedPOS: typeof parsed.selectedPOS === 'string' ? parsed.selectedPOS : 'all',
-      listViewMode: isListViewMode(parsed.listViewMode) ? parsed.listViewMode : 'paginated',
       browsePage:
         typeof parsed.browsePage === 'number' && Number.isFinite(parsed.browsePage) && parsed.browsePage > 0
           ? Math.floor(parsed.browsePage)
@@ -180,18 +173,13 @@ function App() {
   const [selectedLevel, setSelectedLevel] = useState<number | 'all' | '7-9'>(initialSession?.selectedLevel || 'all');
   const [selectedPOS, setSelectedPOS] = useState<string>(initialSession?.selectedPOS || 'all');
   const [searchResults, setSearchResults] = useState<UnifiedEntry[]>([]);
-  const [listViewMode, setListViewMode] = useState<ListViewMode>(initialSession?.listViewMode || 'paginated');
   const [browsePage, setBrowsePage] = useState<number>(initialSession?.browsePage || 1);
-  const [isPending, startTransition] = useTransition();
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const searchCacheRef = useRef<Map<string, UnifiedEntry[]>>(new Map());
   const viewScrollPositionsRef = useRef<Partial<Record<ViewMode, number>>>(initialSession?.scrollPositions || {});
   const previousViewRef = useRef<ViewMode>(initialSession?.currentView || 'landing');
   const hasProcessedHashRef = useRef(false);
   
   // Stats
-  const [, setUserStats] = useState<import('@/types/hsk').UserStats | null>(null);
-  const [, setDueCount] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
   
   // Settings
@@ -259,10 +247,7 @@ function App() {
         const allEntries = unifiedDictionary.getAllEntries();
         setEntries(allEntries);
         setSearchResults(allEntries);
-        searchCacheRef.current.clear();
 
-        setUserStats(hskDataService.getUserStats());
-        setDueCount(hskDataService.getDueReviews().length);
         setFavorites(hskDataService.getFavorites());
 
         if (initialSession) {
@@ -273,7 +258,6 @@ function App() {
           setSearchQuery(initialSession.searchQuery);
           setSelectedLevel(initialSession.selectedLevel);
           setSelectedPOS(initialSession.selectedPOS);
-          setListViewMode(initialSession.listViewMode);
           setBrowsePage(initialSession.browsePage);
           setDetailReturnView(initialSession.detailReturnView);
           viewScrollPositionsRef.current = initialSession.scrollPositions;
@@ -492,7 +476,6 @@ function App() {
         searchQuery,
         selectedLevel,
         selectedPOS,
-        listViewMode,
         browsePage,
         selectedEntryId: selectedEntry?.id,
         detailSequenceIds,
@@ -525,7 +508,6 @@ function App() {
     searchQuery,
     selectedLevel,
     selectedPOS,
-    listViewMode,
     browsePage,
     selectedEntry,
     detailSequence,
@@ -537,43 +519,18 @@ function App() {
   useEffect(() => {
     if (!dictionaryReady) return;
 
-    const cacheKey = `${deferredSearchQuery}|${selectedLevel}|${selectedPOS}`;
-    const cached = searchCacheRef.current.get(cacheKey);
-
-    if (cached) {
-      startTransition(() => {
-        setSearchResults(cached);
-      });
-      return;
-    }
-
     const timer = setTimeout(() => {
-      // Use requestAnimationFrame for smoother UI updates
       requestAnimationFrame(() => {
         const results = unifiedDictionary.search(deferredSearchQuery, {
           hskLevel: selectedLevel === 'all' ? undefined : selectedLevel,
           partOfSpeech: selectedPOS === 'all' ? undefined : selectedPOS,
         });
-
-        const filtered = results.map((r) => r.entry);
-
-        searchCacheRef.current.set(cacheKey, filtered);
-        // Limit cache size to prevent unbounded growth
-        if (searchCacheRef.current.size > 30) {
-          const firstKey = searchCacheRef.current.keys().next().value;
-          if (firstKey !== undefined) {
-            searchCacheRef.current.delete(firstKey);
-          }
-        }
-
-        startTransition(() => {
-          setSearchResults(filtered);
-        });
+        setSearchResults(results.map((r) => r.entry));
       });
     }, 120);
 
     return () => clearTimeout(timer);
-  }, [dictionaryReady, deferredSearchQuery, selectedLevel, selectedPOS, startTransition]);
+  }, [dictionaryReady, deferredSearchQuery, selectedLevel, selectedPOS]);
 
   // Stats
   const totalWords = entries.length;
@@ -989,7 +946,7 @@ function App() {
                       browsePage={browsePage}
                       onBrowsePageChange={setBrowsePage}
                       deferredSearchQuery={deferredSearchQuery}
-                      isPending={isPending}
+                      isPending={searchQuery !== deferredSearchQuery}
                       searchHistory={searchHistory}
                       onSelectHistoryTerm={handleSelectHistoryTerm}
                       onClearHistory={handleClearHistory}

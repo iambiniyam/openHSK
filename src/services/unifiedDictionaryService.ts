@@ -1,5 +1,4 @@
 import type { HSKEntry } from '@/types/hsk';
-import { loadHskDataset } from '@/lib/datasetLoader';
 import { loadDataProgressively, type ProgressCallback } from '@/lib/progressiveLoader';
 import { yieldToMain } from '@/lib/yieldToMain';
 import { stripTones } from '@/lib/pinyin';
@@ -80,7 +79,8 @@ class UnifiedDictionaryService {
 
   private async loadAllData(): Promise<void> {
     try {
-      this.hskData = await loadHskDataset<HSKEntry>();
+      const data = await loadDataProgressively(() => {});
+      this.hskData = [...(data.hskPart1 as HSKEntry[]), ...(data.hskPart2 as HSKEntry[])];
       await this.buildUnifiedEntries();
       await this.buildIndexes();
       this.loaded = true;
@@ -390,37 +390,6 @@ class UnifiedDictionaryService {
       .map(item => item.entry);
   }
 
-  getHSKStats(): { level: number | '7-9'; label: string; count: number }[] {
-    const stats: Record<string, number> = {};
-    for (const entry of this.entries.values()) {
-      const level = entry.hskLevel || 0;
-      if (level >= 7) stats['7-9'] = (stats['7-9'] || 0) + 1;
-      else if (level > 0) stats[level] = (stats[level] || 0) + 1;
-    }
-    const result: { level: number | '7-9'; label: string; count: number }[] = [];
-    for (let i = 1; i <= 6; i++) {
-      if (stats[i]) result.push({ level: i, label: `HSK ${i}`, count: stats[i] });
-    }
-    if (stats['7-9']) result.push({ level: '7-9', label: 'HSK 7-9', count: stats['7-9'] });
-    return result;
-  }
-
-  getRandomEntries(count: number, hskLevel?: number | '7-9'): UnifiedEntry[] {
-    let entries = Array.from(this.entries.values());
-    if (hskLevel !== undefined) {
-      if (hskLevel === '7-9') {
-        entries = entries.filter(e => e.hskLevel && e.hskLevel >= 7);
-      } else {
-        entries = entries.filter(e => e.hskLevel === hskLevel);
-      }
-    }
-    return entries.sort(() => Math.random() - 0.5).slice(0, count);
-  }
-
-  getCount(): number {
-    return this.entries.size;
-  }
-
   isLoaded(): boolean {
     return this.loaded;
   }
@@ -452,17 +421,6 @@ class UnifiedDictionaryService {
     return 'advanced';
   }
 
-  getHanziCharacter(): undefined {
-    return undefined;
-  }
-
-  getHanziGraphics(): undefined {
-    return undefined;
-  }
-
-  hasStrokeData(): boolean {
-    return false;
-  }
 }
 
 export const unifiedDictionary = new UnifiedDictionaryService();

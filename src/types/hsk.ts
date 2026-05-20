@@ -53,7 +53,6 @@ export interface HSKSource {
   hanzi: string;
   traditional: string;
   pinyin: string;
-  meaning: string;
   level: number;
   hskVersion: string;
   levelLabel: string;
@@ -79,26 +78,4 @@ export interface HSKEntry {
   learning_aids: HSKLearningAids;
 }
 
-export interface StudyProgress {
-  entryId: string;
-  level: number;
-  lastReviewed: number;
-  nextReview: number;
-  confidence: number;
-  reviewCount: number;
-  correctCount: number;
-  /** SM-2 style ease factor (default 2.5) */
-  easeFactor?: number;
-  /** Number of times this card was failed after graduating */
-  lapses?: number;
-}
 
-export interface UserStats {
-  totalStudied: number;
-  currentStreak: number;
-  longestStreak: number;
-  lastStudyDate: string;
-  levelProgress: { [level: string]: { studied: number; total: number } };
-}
-
-export type ViewMode = 'dashboard' | 'vocabulary' | 'character' | 'study' | 'graph' | 'progress';

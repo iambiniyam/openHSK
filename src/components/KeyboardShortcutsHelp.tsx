@@ -17,28 +17,16 @@ const SHORTCUTS: ShortcutGroup[] = [
     ],
   },
   {
-    name: 'Study Mode',
-    shortcuts: [
-      { key: 'Space', desc: 'Reveal answer' },
-      { key: '1', desc: 'Again (failed)' },
-      { key: '2', desc: 'Hard' },
-      { key: '3', desc: 'Good' },
-      { key: '4', desc: 'Easy' },
-    ],
-  },
-  {
-    name: 'Quiz Mode',
-    shortcuts: [
-      { key: '1–4', desc: 'Select answer option' },
-      { key: 'Space / Enter', desc: 'Next question' },
-      { key: 'Esc', desc: 'Exit quiz' },
-    ],
-  },
-  {
     name: 'Browse & Detail',
     shortcuts: [
       { key: 'Enter', desc: 'Search / open selected word' },
       { key: '← / →', desc: 'Navigate detail pages' },
+    ],
+  },
+  {
+    name: 'Audio',
+    shortcuts: [
+      { key: 'Space', desc: 'Play / Pause' },
     ],
   },
 ];
