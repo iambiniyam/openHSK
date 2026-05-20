@@ -40,9 +40,8 @@ export const DetailView = memo(function DetailView({
   }, [detailSequence, selectedEntry]);
 
   const backLabel =
-    detailReturnView === 'dashboard' ? 'Dashboard'
-    : detailReturnView === 'landing' ? 'Home'
-    : 'Browse';
+    detailReturnView === 'landing' ? 'Home'
+    : 'HSK';
 
   const navigateDetailByOffset = useCallback((offset: -1 | 1) => {
     const next = sequence[currentIndex + offset];

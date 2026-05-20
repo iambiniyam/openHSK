@@ -26,7 +26,6 @@ import { hskDataService } from '@/services/hskDataService';
 import { ttsService, type TtsProvider } from '@/services/ttsService';
 
 import { fetchWithCacheFallback } from '@/lib/offlineFetch';
-import type { UserStats } from '@/types/hsk';
 import type { StoryDataset } from '@/types/stories';
 import type { BookDataset } from '@/types/books';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -41,7 +40,6 @@ import { SectionLoader } from '@/components/SectionLoader';
 import { AudioPlaylist } from '@/components/AudioPlaylist';
 
 import { LandingView } from '@/views/LandingView';
-import { DashboardView } from '@/views/DashboardView';
 import { BrowseView } from '@/views/BrowseView';
 import { DetailView } from '@/views/DetailView';
 import { StoriesView } from '@/views/StoriesView';
@@ -50,7 +48,7 @@ import { ProfessionalView } from '@/views/ProfessionalView';
 
 import './App.css';
 
-export type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'audio' | 'stories' | 'books' | 'professional';
+export type ViewMode = 'landing' | 'browse' | 'detail' | 'audio' | 'stories' | 'books' | 'professional';
 type ListViewMode = 'paginated' | 'virtualized';
 
 const APP_SESSION_STORAGE_KEY = 'openhsk.ui-session.v1';
@@ -75,7 +73,7 @@ interface PersistedUiSession {
 const isViewMode = (value: unknown): value is ViewMode => {
   return (
     typeof value === 'string' &&
-    ['landing', 'dashboard', 'browse', 'detail', 'audio', 'stories', 'books', 'professional'].includes(value)
+    ['landing', 'browse', 'detail', 'audio', 'stories', 'books', 'professional'].includes(value)
   );
 };
 
@@ -192,21 +190,13 @@ function App() {
   const hasProcessedHashRef = useRef(false);
   
   // Stats
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [dailyStats, setDailyStats] = useState({
-    newWordsLearned: 0,
-    wordsReviewed: 0,
-    studyTimeMinutes: 0,
-    quizzesCompleted: 0,
-    writingExercises: 0
-  });
-  const [dueCount, setDueCount] = useState(0);
+  const [, setUserStats] = useState<import('@/types/hsk').UserStats | null>(null);
+  const [, setDueCount] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
   
   // Settings
   const [ttsRate, setTtsRate] = useState(initialSession?.ttsRate || 1);
   const [ttsProvider, setTtsProvider] = useState<TtsProvider>(() => ttsService.getProvider());
-  const [, setShowPomodoro] = useState(false);
 
   // TTS voice state
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>(() => {
@@ -231,18 +221,6 @@ function App() {
     } catch { /* ignore */ }
     return [];
   });
-
-  // Welcome banner
-  const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.localStorage.getItem('openhsk.welcomed.v1') !== 'true';
-  });
-  const dismissWelcomeBanner = useCallback(() => {
-    setShowWelcomeBanner(false);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('openhsk.welcomed.v1', 'true');
-    }
-  }, []);
 
   // Stories state
   const [storyDataset, setStoryDataset] = useState<StoryDataset | null>(null);
@@ -286,7 +264,6 @@ function App() {
         setUserStats(hskDataService.getUserStats());
         setDueCount(hskDataService.getDueReviews().length);
         setFavorites(hskDataService.getFavorites());
-        setDailyStats(hskDataService.getDailyStats());
 
         if (initialSession) {
           const entryById = new Map(allEntries.map((entry) => [entry.id, entry] as const));
@@ -599,7 +576,6 @@ function App() {
   }, [dictionaryReady, deferredSearchQuery, selectedLevel, selectedPOS, startTransition]);
 
   // Stats
-  const hskStats = unifiedDictionary.getHSKStats();
   const totalWords = entries.length;
 
   // Actions
@@ -644,9 +620,6 @@ function App() {
 
   // Stable callback wrappers for view components
   const handleNavigateTo = useCallback((view: ViewMode) => setCurrentView(view), []);
-  const handleShowPomodoro = useCallback(() => setShowPomodoro(true), []);
-  const handleShowFeatureGuide = useCallback(() => { dismissWelcomeBanner(); window.dispatchEvent(new CustomEvent('openhsk:show-feature-guide')); }, [dismissWelcomeBanner]);
-
   const handleSearchQueryChange = useCallback((value: string) => { setSearchQuery(value); setBrowsePage(1); }, []);
   const handleSearchSubmit = useCallback((trimmed: string) => {
     setSearchHistory((prev) => {
@@ -724,22 +697,13 @@ function App() {
               Start
             </Button>
             <Button
-              variant={currentView === 'dashboard' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setCurrentView('dashboard')}
-              className="gap-2"
-            >
-              <img src="/brand/icons/dictionary-stack.svg" alt="" aria-hidden="true" className="w-4 h-4" loading="eager" />
-              Home
-            </Button>
-            <Button
               variant={currentView === 'browse' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setCurrentView('browse')}
               className="gap-2"
             >
               <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-4 h-4" loading="eager" />
-              Browse
+              HSK
             </Button>
             <Button
               variant={currentView === 'audio' ? 'secondary' : 'ghost'}
@@ -942,8 +906,7 @@ function App() {
         <div className="flex justify-around items-center p-1.5 gap-1 overflow-x-auto">
           {([
             { view: 'landing' as const, label: 'Start', icon: <img src="/brand/logo-mark.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
-            { view: 'dashboard' as const, label: 'Home', icon: <img src="/brand/icons/dictionary-stack.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
-            { view: 'browse' as const, label: 'Browse', icon: <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
+            { view: 'browse' as const, label: 'HSK', icon: <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
             { view: 'audio' as const, label: 'Audio', icon: <Volume2 className="w-5 h-5" /> },
             { view: 'stories' as const, label: 'Stories', icon: <ScrollText className={`w-5 h-5 ${!storyDataset ? 'opacity-50' : ''}`} />, disabled: !storyDataset },
             { view: 'books' as const, label: 'Books', icon: <Library className={`w-5 h-5 ${!bookDataset ? 'opacity-50' : ''}`} />, disabled: !bookDataset },
@@ -987,7 +950,7 @@ function App() {
         <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 overflow-x-hidden">
           <div key={currentView} className="animate-fade-in">
               {currentView === 'landing' ? (
-                <LandingView totalWords={totalWords} onStartLearning={() => setCurrentView('dashboard')} onBrowseDictionary={() => setCurrentView('browse')} />
+                <LandingView totalWords={totalWords} onStartLearning={() => setCurrentView('browse')} onBrowseDictionary={() => setCurrentView('browse')} />
               ) : initError ? (
                 <Card className="max-w-md mx-auto mt-12">
                   <CardContent className="p-8 text-center space-y-4">
@@ -1010,23 +973,6 @@ function App() {
                 <SectionLoader label="Preparing your HSK data for this section..." />
               ) : (
                 <>
-                  {currentView === 'dashboard' && (
-                    <DashboardView
-                      showWelcomeBanner={showWelcomeBanner}
-                      userStats={userStats}
-                      dueCount={dueCount}
-                      totalWords={totalWords}
-                      favorites={favorites}
-                      hskStats={hskStats}
-                      dailyStats={dailyStats}
-                      storyDataset={storyDataset}
-                      bookDataset={bookDataset}
-                      onDismissWelcomeBanner={dismissWelcomeBanner}
-                      onShowFeatureGuide={handleShowFeatureGuide}
-                      onNavigateTo={handleNavigateTo}
-                      onShowPomodoro={handleShowPomodoro}
-                    />
-                  )}
                   {currentView === 'browse' && (
                     <BrowseView
                       searchQuery={searchQuery}

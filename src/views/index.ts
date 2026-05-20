@@ -1,5 +1,4 @@
 export { LandingView } from './LandingView';
-export { DashboardView } from './DashboardView';
 export { BrowseView } from './BrowseView';
 export { DetailView } from './DetailView';
 export { StoriesView } from './StoriesView';

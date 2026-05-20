@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import {
-  Timer,
   BookOpen,
   Search,
   Volume2,
@@ -85,13 +84,7 @@ const categories: FeatureCategory[] = [
         icon: LayoutDashboard,
         title: 'Dashboard',
         description: 'Your personal learning hub with stats, review tracking, and quick actions.',
-        view: 'dashboard',
-      },
-      {
-        icon: Timer,
-        title: 'Focus Timer',
-        description: 'Pomodoro timer to stay focused during study sessions.',
-        view: 'dashboard',
+        view: 'browse',
       },
     ],
   },
