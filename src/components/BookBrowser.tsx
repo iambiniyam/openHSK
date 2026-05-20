@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+
 import {
   Library,
   Search,
@@ -145,7 +145,7 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
     <div className="space-y-6">
       {/* Hero Banner */}
       {meta && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
           <Card className="bg-gradient-to-br from-slate-50 to-amber-50 dark:from-slate-900/50 dark:to-amber-950/30 border-slate-200 dark:border-slate-800 overflow-hidden">
             <CardContent className="p-6 sm:p-8">
               <div className="flex items-start gap-4">
@@ -172,7 +172,7 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       )}
 
       {/* Search & Filters */}
@@ -235,7 +235,7 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
         </Empty>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredBooks.map((book, i) => {
+          {filteredBooks.map((book) => {
 
             const spineColor = levelSpineColors[book.hsk_level] || levelSpineColors[7];
             const accent = genreAccent[book.genre] || '';
@@ -244,12 +244,7 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
             const progress = book.coverage ? book.coverage * 100 : 0;
 
             return (
-              <motion.div
-                key={book.book_id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.04, 0.4), duration: 0.35 }}
-              >
+              <div key={book.book_id}>
                 <div
                   className="group cursor-pointer"
                   onClick={() => onBookSelect(book, bookIndexMap.get(book.book_id) ?? 0)}
@@ -350,7 +345,7 @@ export const BookBrowser = ({ books, meta, onBookSelect }: BookBrowserProps) => 
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>

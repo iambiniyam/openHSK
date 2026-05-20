@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
   Volume2,
   Eye,
@@ -249,7 +249,7 @@ export const BookReader = ({
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
       {/* Book Cover / Title Area */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+      <div>
         <Card className="overflow-hidden">
           <div className={`absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b ${spineColor}`} />
           <CardContent className="pl-6 p-5 sm:p-6">
@@ -289,7 +289,7 @@ export const BookReader = ({
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Chapter Navigation Bar */}
       <div className="flex items-center gap-2 sticky top-20 z-30 bg-background/95 backdrop-blur py-2 -mx-1 px-1 rounded-lg">
@@ -339,14 +339,7 @@ export const BookReader = ({
       </div>
 
       {/* Table of Contents Sidebar (overlay) */}
-      <AnimatePresence>
-        {showToc && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
+      {showToc && (
             <Card className="bg-muted/30">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -383,18 +376,12 @@ export const BookReader = ({
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      )}
 
       {/* Chapter Content */}
       {chapter && (
-        <motion.div
+        <div
           key={chapter.chapter_number}
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -30 }}
-          transition={{ duration: 0.25 }}
           ref={contentRef}
         >
           <Card className="shadow-lg overflow-hidden">
@@ -487,17 +474,12 @@ export const BookReader = ({
                       ref={(el) => { sentenceRefs.current[i] = el; }}
                       className="group"
                     >
-                      <motion.div
-                        animate={{
-                          backgroundColor: isCurrent
-                            ? 'hsl(var(--primary) / 0.12)'
-                            : 'transparent',
-                          borderLeftColor: isCurrent
-                            ? 'hsl(var(--primary))'
-                            : 'transparent',
+                      <div
+                        style={{
+                          backgroundColor: isCurrent ? 'hsl(var(--primary) / 0.12)' : 'transparent',
+                          borderLeftColor: isCurrent ? 'hsl(var(--primary))' : 'transparent',
                         }}
-                        transition={{ duration: 0.25 }}
-                        className="flex items-start gap-2 sm:gap-3 rounded-lg px-3 py-2 border-l-4 border-l-transparent cursor-pointer"
+                        className="flex items-start gap-2 sm:gap-3 rounded-lg px-3 py-2 border-l-4 border-l-transparent cursor-pointer transition-colors duration-200"
                         onClick={() => {
                           if (isCurrent) return;
                           handlePlayFromIndex(i);
@@ -533,25 +515,15 @@ export const BookReader = ({
                         </div>
                         <div className="shrink-0 flex items-center gap-1">
                           {isCurrent && isPlaying && !isPaused && (
-                            <motion.div
-                              className="flex items-center gap-0.5 mr-1"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                            >
+                            <div className="flex items-center gap-0.5 mr-1">
                               {[0, 1, 2].map((j) => (
-                                <motion.span
+                                <span
                                   key={j}
-                                  className="w-1 h-4 bg-primary rounded-full"
-                                  animate={{ scaleY: [0.4, 1, 0.4] }}
-                                  transition={{
-                                    duration: 0.8,
-                                    repeat: Infinity,
-                                    delay: j * 0.15,
-                                    ease: 'easeInOut',
-                                  }}
+                                  className="w-1 h-4 bg-primary rounded-full animate-pulse"
+                                  style={{ animationDelay: `${j * 0.15}s` }}
                                 />
                               ))}
-                            </motion.div>
+                            </div>
                           )}
                           <Button
                             variant="ghost" size="icon"
@@ -566,7 +538,7 @@ export const BookReader = ({
                             <Volume2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
-                      </motion.div>
+                      </div>
                     </div>
                   );
                 })}
@@ -579,9 +551,7 @@ export const BookReader = ({
                     {showVocabList ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     {showVocabList ? 'Hide' : `Chapter Vocabulary (${chapterWordUsage.length} words)`}
                   </Button>
-                  <AnimatePresence>
-                    {showVocabList && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  {showVocabList && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
                           {chapterWordUsage.map((usage, i) => (
                             <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/50 hover:bg-muted cursor-pointer transition-colors border border-transparent hover:border-primary/20"
@@ -599,14 +569,12 @@ export const BookReader = ({
                             </div>
                           ))}
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       )}
 
       {/* Chapter end — Next chapter preview + complete button */}

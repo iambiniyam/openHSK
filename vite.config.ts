@@ -43,7 +43,7 @@ export default defineConfig(() => ({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => /\/(hsk3\.0(?:\.part\d+)?\.json|dictionary\.txt|graphics(?:\.part\d+)?\.txt|quality\/hsk-(?:cedict-enrichment|tatoeba-examples)\.v1\.json)$/.test(url.pathname),
+            urlPattern: ({ url }) => /\/(hsk3\.0(?:\.part\d+)?\.json|quality\/hsk-(?:stories|books)\.v1\.json)$/.test(url.pathname),
             handler: 'CacheFirst',
             options: {
               cacheName: 'openhsk-dataset-cache',
@@ -99,26 +99,11 @@ export default defineConfig(() => ({
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
 
-          if (id.includes('d3') || id.includes('react-force-graph-2d')) {
-            return 'graph-vendor';
-          }
-          if (id.includes('hanzi-writer')) {
-            return 'hanzi-vendor';
-          }
           if (id.includes('@radix-ui')) {
             return 'radix-vendor';
           }
-          if (id.includes('framer-motion')) {
-            return 'motion-vendor';
-          }
-          if (id.includes('recharts')) {
-            return 'charts-vendor';
-          }
           if (id.includes('lucide-react')) {
             return 'icons-vendor';
-          }
-          if (id.includes('react-window')) {
-            return 'window-vendor';
           }
 
           return 'vendor';

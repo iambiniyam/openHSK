@@ -1,7 +1,6 @@
 import { Suspense, lazy, memo, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SectionLoader } from './SectionLoader';
+import { SectionLoader } from '@/components/SectionLoader';
 import { loadVocabDataset, loadDialogueDataset } from '@/services/professionalDataService';
 import type { VocabDataset, DialogueDataset } from '@/types/professional';
 
@@ -40,9 +39,9 @@ export const ProfessionalView = memo(function ProfessionalView({ onDatasetLoaded
 
   if (loading) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div>
         <SectionLoader label="Loading professional dataset..." />
-      </motion.div>
+      </div>
     );
   }
 
@@ -50,7 +49,7 @@ export const ProfessionalView = memo(function ProfessionalView({ onDatasetLoaded
   const hasDialogues = dialogueDataset && dialogueDataset.scenarios.length > 0;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'vocab' | 'dialogues')}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="vocab">
@@ -86,6 +85,6 @@ export const ProfessionalView = memo(function ProfessionalView({ onDatasetLoaded
           )}
         </TabsContent>
       </Tabs>
-    </motion.div>
+    </div>
   );
 });

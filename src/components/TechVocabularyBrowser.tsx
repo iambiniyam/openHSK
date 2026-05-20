@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
   Search, Filter, Hash, X, Volume2, BookOpen, Lightbulb,
   Smartphone, FlaskConical, Car, ClipboardCheck, Users, Code2,
@@ -82,9 +82,8 @@ export default function TechVocabularyBrowser({ terms, categories }: TechVocabul
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
         {categories.map((cat) => (
-          <motion.button
+          <button
             key={cat.id}
-            whileTap={{ scale: 0.97 }}
             onClick={() => setActiveCategory(activeCategory === cat.id ? 'all' : cat.id)}
             className={`p-3 rounded-xl border text-left transition-all ${
               activeCategory === cat.id
@@ -100,7 +99,7 @@ export default function TechVocabularyBrowser({ terms, categories }: TechVocabul
             </div>
             <div className="text-lg font-bold">{cat.term_count}</div>
             <div className="text-[10px] text-muted-foreground truncate">{cat.label_zh}</div>
-          </motion.button>
+          </button>
         ))}
       </div>
 
@@ -148,21 +147,12 @@ export default function TechVocabularyBrowser({ terms, categories }: TechVocabul
         </Empty>
       ) : (
         <div className="grid gap-3">
-          <AnimatePresence mode="popLayout">
             {filteredTerms.map((term) => {
               const isExpanded = expandedId === term.id;
               const cat = categories.find((c) => c.id === term.category);
               const hskClass = HSK_COLORS[term.hsk_level_estimate] || HSK_COLORS[4];
 
               return (
-                <motion.div
-                  key={term.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.15 }}
-                >
                   <Card
                     className={`cursor-pointer transition-all hover:shadow-md ${
                       isExpanded ? 'border-primary/30 shadow-sm' : ''
@@ -211,15 +201,7 @@ export default function TechVocabularyBrowser({ terms, categories }: TechVocabul
                       )}
                     </CardHeader>
 
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
+                    {isExpanded && (
                           <CardContent className="pt-0 space-y-4">
                             <Separator />
 
@@ -254,14 +236,10 @@ export default function TechVocabularyBrowser({ terms, categories }: TechVocabul
                               </div>
                             </div>
                           </CardContent>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    )}
                   </Card>
-                </motion.div>
               );
             })}
-          </AnimatePresence>
         </div>
       )}
     </div>

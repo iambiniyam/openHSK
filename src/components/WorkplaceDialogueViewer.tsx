@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
   MessageSquare, Volume2, ChevronRight, Users, Hash,
   CalendarDays, ClipboardList, Lightbulb, AlertTriangle,
@@ -40,12 +40,7 @@ function DialogueLineCard({ line, index }: { line: DialogueLine; index: number }
   const isEven = index % 2 === 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: isEven ? -10 : 10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.2 }}
-      className={`flex gap-3 ${isEven ? '' : 'flex-row-reverse'}`}
-    >
+    <div className={`flex gap-3 ${isEven ? '' : 'flex-row-reverse'}`}>
       <div className={`flex-1 max-w-[85%] ${isEven ? '' : 'text-right'}`}>
         <div className={`inline-flex items-center gap-2 mb-1 ${isEven ? '' : 'flex-row-reverse'}`}>
           <Badge variant="outline" className="text-xs font-normal">
@@ -69,7 +64,7 @@ function DialogueLineCard({ line, index }: { line: DialogueLine; index: number }
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -202,16 +197,8 @@ export default function WorkplaceDialogueViewer({ scenarios }: WorkplaceDialogue
         </Empty>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          <AnimatePresence mode="popLayout">
             {filteredScenarios.map((scenario) => (
-              <motion.div
-                key={scenario.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.15 }}
-              >
+              <div key={scenario.id}>
                 <Card
                   className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all h-full"
                   onClick={() => setSelectedScenarioId(scenario.id)}
@@ -241,9 +228,8 @@ export default function WorkplaceDialogueViewer({ scenarios }: WorkplaceDialogue
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
         </div>
       )}
     </div>

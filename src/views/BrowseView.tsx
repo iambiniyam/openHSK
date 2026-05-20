@@ -1,17 +1,12 @@
-import { Suspense, lazy, memo, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { memo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Search, Filter, X, LayoutGrid, List, History, Trash2 } from 'lucide-react';
-import { SectionLoader } from './SectionLoader';
+import { Search, Filter, X, History, Trash2 } from 'lucide-react';
+import { PaginatedWordList } from '@/components/PaginatedWordList';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
 import type { ViewMode } from '@/App';
-
-const PaginatedWordList = lazy(() => import('@/components/PaginatedWordList'));
-const VirtualizedWordList = lazy(() => import('@/components/VirtualizedWordList'));
 
 interface BrowseViewProps {
   searchQuery: string;
@@ -25,8 +20,6 @@ interface BrowseViewProps {
   searchResults: UnifiedEntry[];
   favorites: string[];
   onToggleFavorite: (id: string) => void;
-  listViewMode: 'paginated' | 'virtualized';
-  onListViewModeChange: (mode: 'paginated' | 'virtualized') => void;
   browsePage: number;
   onBrowsePageChange: (page: number) => void;
   deferredSearchQuery: string;
@@ -49,8 +42,6 @@ export const BrowseView = memo(function BrowseView({
   searchResults,
   favorites,
   onToggleFavorite,
-  listViewMode,
-  onListViewModeChange,
   browsePage,
   onBrowsePageChange,
   deferredSearchQuery,
@@ -80,7 +71,7 @@ export const BrowseView = memo(function BrowseView({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [searchQuery, onClearSearch]);
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 sm:space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <Card className="sticky top-0 z-10 shadow-md">
         <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -147,58 +138,27 @@ export const BrowseView = memo(function BrowseView({
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
               {isPending || searchQuery !== deferredSearchQuery ? (
                 <span className="flex items-center gap-2">
-                  <motion.div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
-                  Searching...
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    Searching...
                 </span>
               ) : `${searchResults.length.toLocaleString()} words found`}
             </div>
 
-            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={listViewMode === 'paginated' ? 'secondary' : 'ghost'} size="icon" aria-label="Grid view" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onListViewModeChange('paginated')}>
-                      <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Grid View (Paginated)</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant={listViewMode === 'virtualized' ? 'secondary' : 'ghost'} size="icon" aria-label="List view" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onListViewModeChange('virtualized')}>
-                      <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>List View (Virtualized)</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+
           </div>
         </CardContent>
       </Card>
 
-      <Suspense fallback={<SectionLoader label="Rendering word list..." />}>
-        {listViewMode === 'paginated' ? (
-          <PaginatedWordList
-            entries={searchResults}
-            favoriteIds={favorites}
-            onEntryClick={(entry) => onOpenDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
-            onToggleFavorite={onToggleFavorite}
-            itemsPerPage={48}
-            currentPage={browsePage}
-            onPageChange={onBrowsePageChange}
-            highlightQuery={deferredSearchQuery}
-          />
-        ) : (
-          <VirtualizedWordList
-            entries={searchResults}
-            favoriteIds={favorites}
-            onEntryClick={(entry) => onOpenDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
-            onToggleFavorite={onToggleFavorite}
-            highlightQuery={deferredSearchQuery}
-          />
-        )}
-      </Suspense>
-    </motion.div>
+      <PaginatedWordList
+        entries={searchResults}
+        favoriteIds={favorites}
+        onEntryClick={(entry) => onOpenDetailView(entry, { sequence: searchResults, returnView: 'browse' })}
+        onToggleFavorite={onToggleFavorite}
+        itemsPerPage={48}
+        currentPage={browsePage}
+        onPageChange={onBrowsePageChange}
+        highlightQuery={deferredSearchQuery}
+      />
+      </div>
   );
 });

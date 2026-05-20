@@ -1,7 +1,5 @@
-import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
+import { useState, useEffect, useCallback, useMemo, useDeferredValue, useRef, useTransition } from 'react';
 import { 
-  BarChart3, 
-  Brain,
   Settings,
   Sun,
   Moon,
@@ -11,8 +9,6 @@ import {
   ScrollText,
   Library,
   AlertTriangle,
-  Headphones,
-  Play,
   Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,14 +18,13 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 
 import { unifiedDictionary, type UnifiedEntry } from '@/services/unifiedDictionaryService';
 import { hskDataService } from '@/services/hskDataService';
 import { ttsService, type TtsProvider } from '@/services/ttsService';
-import { scheduleRuntimeWarmup } from '@/lib/runtimeWarmup';
+
 import { fetchWithCacheFallback } from '@/lib/offlineFetch';
 import type { UserStats } from '@/types/hsk';
 import type { StoryDataset } from '@/types/stories';
@@ -43,26 +38,23 @@ import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import type { ProgressUpdate } from '@/lib/progressiveLoader';
 import { buildDetailSequenceWindow } from '@/lib/detailSequence';
 import { SectionLoader } from '@/components/SectionLoader';
+import { AudioPlaylist } from '@/components/AudioPlaylist';
 
-const LandingView = lazy(() => import('@/views/LandingView').then((m) => ({ default: m.LandingView })));
-const DashboardView = lazy(() => import('@/views/DashboardView').then((m) => ({ default: m.DashboardView })));
-const BrowseView = lazy(() => import('@/views/BrowseView').then((m) => ({ default: m.BrowseView })));
-const DetailView = lazy(() => import('@/views/DetailView').then((m) => ({ default: m.DetailView })));
-const StudyView = lazy(() => import('@/views/StudyView').then((m) => ({ default: m.StudyView })));
-const ProgressView = lazy(() => import('@/views/ProgressView').then((m) => ({ default: m.ProgressView })));
-const StoriesView = lazy(() => import('@/views/StoriesView').then((m) => ({ default: m.StoriesView })));
-const BooksView = lazy(() => import('@/views/BooksView').then((m) => ({ default: m.BooksView })));
-const ProfessionalView = lazy(() => import('@/views/ProfessionalView').then((m) => ({ default: m.ProfessionalView })));
+import { LandingView } from '@/views/LandingView';
+import { DashboardView } from '@/views/DashboardView';
+import { BrowseView } from '@/views/BrowseView';
+import { DetailView } from '@/views/DetailView';
+import { StoriesView } from '@/views/StoriesView';
+import { BooksView } from '@/views/BooksView';
+import { ProfessionalView } from '@/views/ProfessionalView';
 
 import './App.css';
 
-export type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'study' | 'progress' | 'audio' | 'stories' | 'books' | 'professional';
+export type ViewMode = 'landing' | 'dashboard' | 'browse' | 'detail' | 'audio' | 'stories' | 'books' | 'professional';
 type ListViewMode = 'paginated' | 'virtualized';
-export type ProgressTab = 'stats' | 'favorites' | 'grammar' | 'data';
 
 const APP_SESSION_STORAGE_KEY = 'openhsk.ui-session.v1';
 const MAX_PERSISTED_DETAIL_SEQUENCE = 180;
-const MAX_PERSISTED_STUDY_ENTRIES = 30;
 
 interface PersistedUiSession {
   version: 1;
@@ -74,30 +66,21 @@ interface PersistedUiSession {
   selectedPOS: string;
   listViewMode: ListViewMode;
   browsePage: number;
-  progressTab: ProgressTab;
   selectedEntryId?: string;
   detailSequenceIds: string[];
   detailReturnView: ViewMode;
-  studyEntryIds: string[];
-  currentStudyIndex: number;
-  showAnswer: boolean;
-  showQuiz: boolean;
   scrollPositions: Partial<Record<ViewMode, number>>;
 }
 
 const isViewMode = (value: unknown): value is ViewMode => {
   return (
     typeof value === 'string' &&
-    ['landing', 'dashboard', 'browse', 'detail', 'study', 'progress', 'audio', 'stories', 'books', 'professional'].includes(value)
+    ['landing', 'dashboard', 'browse', 'detail', 'audio', 'stories', 'books', 'professional'].includes(value)
   );
 };
 
 const isListViewMode = (value: unknown): value is ListViewMode => {
   return typeof value === 'string' && ['paginated', 'virtualized'].includes(value);
-};
-
-const isProgressTab = (value: unknown): value is ProgressTab => {
-  return typeof value === 'string' && ['stats', 'favorites', 'grammar', 'data'].includes(value);
 };
 
 const normalizeSelectedLevel = (value: unknown): number | 'all' | '7-9' => {
@@ -147,21 +130,11 @@ const loadPersistedUiSession = (): PersistedUiSession | null => {
         typeof parsed.browsePage === 'number' && Number.isFinite(parsed.browsePage) && parsed.browsePage > 0
           ? Math.floor(parsed.browsePage)
           : 1,
-      progressTab: isProgressTab(parsed.progressTab) ? parsed.progressTab : 'stats',
       selectedEntryId: typeof parsed.selectedEntryId === 'string' ? parsed.selectedEntryId : undefined,
       detailSequenceIds: Array.isArray(parsed.detailSequenceIds)
         ? parsed.detailSequenceIds.filter((id): id is string => typeof id === 'string').slice(0, MAX_PERSISTED_DETAIL_SEQUENCE)
         : [],
       detailReturnView: isViewMode(parsed.detailReturnView) ? parsed.detailReturnView : 'browse',
-      studyEntryIds: Array.isArray(parsed.studyEntryIds)
-        ? parsed.studyEntryIds.filter((id): id is string => typeof id === 'string').slice(0, MAX_PERSISTED_STUDY_ENTRIES)
-        : [],
-      currentStudyIndex:
-        typeof parsed.currentStudyIndex === 'number' && Number.isFinite(parsed.currentStudyIndex) && parsed.currentStudyIndex >= 0
-          ? Math.floor(parsed.currentStudyIndex)
-          : 0,
-      showAnswer: Boolean(parsed.showAnswer),
-      showQuiz: Boolean(parsed.showQuiz),
       scrollPositions: sanitizeScrollPositions(parsed.scrollPositions),
     };
   } catch {
@@ -178,10 +151,6 @@ const savePersistedUiSession = (session: PersistedUiSession): void => {
     // Ignore storage failures to avoid blocking the app.
   }
 };
-
-
-
-const AudioPlaylist = lazy(() => import('@/components/AudioPlaylist').then((m) => ({ default: m.AudioPlaylist })));
 
 
 
@@ -215,7 +184,6 @@ function App() {
   const [searchResults, setSearchResults] = useState<UnifiedEntry[]>([]);
   const [listViewMode, setListViewMode] = useState<ListViewMode>(initialSession?.listViewMode || 'paginated');
   const [browsePage, setBrowsePage] = useState<number>(initialSession?.browsePage || 1);
-  const [progressTab, setProgressTab] = useState<ProgressTab>(initialSession?.progressTab || 'stats');
   const [isPending, startTransition] = useTransition();
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const searchCacheRef = useRef<Map<string, UnifiedEntry[]>>(new Map());
@@ -235,27 +203,10 @@ function App() {
   const [dueCount, setDueCount] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
   
-  // Study mode
-  const [studyEntries, setStudyEntries] = useState<UnifiedEntry[]>([]);
-  const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [showStudyComplete, setShowStudyComplete] = useState(false);
-
-  // Memoized quiz entries to prevent regeneration on every render
-  const quizEntries = useMemo(() => {
-    if (!dictionaryReady) return [];
-    const rec = hskDataService.getRecommendedEntries(100);
-    return rec
-      .map((hsk) => unifiedDictionary.getEntry(hsk.entry_id))
-      .filter((e): e is UnifiedEntry => Boolean(e));
-  }, [dictionaryReady]);
-  
   // Settings
   const [ttsRate, setTtsRate] = useState(initialSession?.ttsRate || 1);
   const [ttsProvider, setTtsProvider] = useState<TtsProvider>(() => ttsService.getProvider());
-  const [showPomodoro, setShowPomodoro] = useState(false);
-  const [exportData, setExportData] = useState('');
+  const [, setShowPomodoro] = useState(false);
 
   // TTS voice state
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>(() => {
@@ -266,20 +217,8 @@ function App() {
   });
   const [selectedVoiceName, setSelectedVoiceName] = useState(() => ttsService.getBestVoiceName());
   const [voiceQuality, setVoiceQuality] = useState(() => ttsService.getVoiceQualityLabel());
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [importData, setImportData] = useState('');
-
   // Init error state
   const [initError, setInitError] = useState(false);
-
-  // Auto-play TTS in study mode
-  const [studyAutoPlay, setStudyAutoPlay] = useState(() => {
-    try { return localStorage.getItem('openhsk.study-autoplay.v1') === 'true'; } catch { return false; }
-  });
-
-  // Study session dialog
-  const [showStudyDialog, setShowStudyDialog] = useState(false);
-  const [studySessionSize, setStudySessionSize] = useState(20);
 
   // Search history
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
@@ -359,7 +298,6 @@ function App() {
           setSelectedPOS(initialSession.selectedPOS);
           setListViewMode(initialSession.listViewMode);
           setBrowsePage(initialSession.browsePage);
-          setProgressTab(initialSession.progressTab);
           setDetailReturnView(initialSession.detailReturnView);
           viewScrollPositionsRef.current = initialSession.scrollPositions;
 
@@ -378,25 +316,9 @@ function App() {
             );
           }
 
-          const restoredStudyEntries = initialSession.studyEntryIds
-            .map((id) => entryById.get(id))
-            .filter((entry): entry is UnifiedEntry => Boolean(entry));
-
-          if (restoredStudyEntries.length > 0) {
-            setStudyEntries(restoredStudyEntries);
-            setCurrentStudyIndex(
-              Math.min(initialSession.currentStudyIndex, restoredStudyEntries.length - 1),
-            );
-            setShowAnswer(initialSession.showAnswer);
-            setShowQuiz(initialSession.showQuiz);
-          }
-
           let restoredView = initialSession.currentView;
           if (restoredView === 'detail' && !restoredSelectedEntry) {
             restoredView = initialSession.detailReturnView;
-          }
-          if (restoredView === 'study' && restoredStudyEntries.length === 0) {
-            restoredView = 'dashboard';
           }
 
           setCurrentView(restoredView);
@@ -515,10 +437,7 @@ function App() {
     }
   }, [currentView]);
 
-  useEffect(() => {
-    if (!dictionaryReady) return;
-    return scheduleRuntimeWarmup();
-  }, [dictionaryReady]);
+
 
   // Dark mode
   useEffect(() => {
@@ -534,7 +453,7 @@ function App() {
       viewScrollPositionsRef.current[previousView] = window.scrollY;
     }
 
-    if (currentView !== 'detail' && currentView !== 'study' && currentView !== 'stories' && currentView !== 'books' && currentView !== 'professional') {
+    if (currentView !== 'detail' && currentView !== 'stories' && currentView !== 'books' && currentView !== 'professional') {
       const targetScroll = viewScrollPositionsRef.current[currentView] || 0;
       requestAnimationFrame(() => {
         window.scrollTo({ top: targetScroll, behavior: 'auto' });
@@ -558,12 +477,6 @@ function App() {
     } else if (currentView === 'detail' && selectedEntry) {
       title = `${selectedEntry.hanzi} (${selectedEntry.pinyin}) | OpenHSK`;
       description = `Study ${selectedEntry.hanzi} with pinyin, meanings, examples, and stroke order in OpenHSK.`;
-    } else if (currentView === 'study') {
-      title = 'Study Session | OpenHSK';
-      description = 'Practice Chinese vocabulary with guided study and quiz mode.';
-    } else if (currentView === 'progress') {
-      title = 'Learning Progress | OpenHSK';
-      description = 'Track your HSK learning progress, goals, and favorite words.';
     } else if (currentView === 'professional') {
       title = 'Professional Chinese | OpenHSK';
       description = 'Learn software engineering, Android, automotive, and workplace Chinese vocabulary and dialogues.';
@@ -604,14 +517,9 @@ function App() {
         selectedPOS,
         listViewMode,
         browsePage,
-        progressTab,
         selectedEntryId: selectedEntry?.id,
         detailSequenceIds,
         detailReturnView,
-        studyEntryIds: studyEntries.map((entry) => entry.id).slice(0, MAX_PERSISTED_STUDY_ENTRIES),
-        currentStudyIndex,
-        showAnswer,
-        showQuiz,
         scrollPositions: viewScrollPositionsRef.current,
       });
     };
@@ -642,14 +550,9 @@ function App() {
     selectedPOS,
     listViewMode,
     browsePage,
-    progressTab,
     selectedEntry,
     detailSequence,
     detailReturnView,
-    studyEntries,
-    currentStudyIndex,
-    showAnswer,
-    showQuiz,
     dictionaryReady,
   ]);
 
@@ -700,12 +603,6 @@ function App() {
   const totalWords = entries.length;
 
   // Actions
-  const refreshStats = useCallback(() => {
-    setUserStats(hskDataService.getUserStats());
-    setDueCount(hskDataService.getDueReviews().length);
-    setDailyStats(hskDataService.getDailyStats());
-  }, []);
-
   const openDetailView = useCallback(
     (
       entry: UnifiedEntry,
@@ -737,69 +634,6 @@ function App() {
     return isFav;
   }, []);
 
-  const startStudySession = useCallback((size = 20) => {
-    const recommended = hskDataService.getRecommendedEntries(size)
-      .map((hsk) => unifiedDictionary.getEntry(hsk.entry_id))
-      .filter((entry): entry is UnifiedEntry => Boolean(entry));
-    setStudyEntries(recommended);
-    setCurrentStudyIndex(0);
-    setShowAnswer(false);
-    setShowQuiz(false);
-    setShowStudyComplete(false);
-    setCurrentView('study');
-  }, []);
-
-  const handleStudyResult = useCallback((rating: 1 | 2 | 3 | 4) => {
-    const entry = studyEntries[currentStudyIndex];
-    if (entry) {
-      hskDataService.updateProgressWithRating(entry.id, rating);
-    }
-
-    if (currentStudyIndex < studyEntries.length - 1) {
-      setCurrentStudyIndex(prev => prev + 1);
-      setShowAnswer(false);
-    } else {
-      refreshStats();
-      setShowStudyComplete(true);
-    }
-  }, [currentStudyIndex, studyEntries, refreshStats]);
-
-  // Study mode keyboard shortcuts
-  useEffect(() => {
-    if (currentView !== 'study' || showQuiz) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-
-      if (!showAnswer) {
-        if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault();
-          setShowAnswer(true);
-        }
-      } else {
-        if (e.key >= '1' && e.key <= '4') {
-          e.preventDefault();
-          handleStudyResult(parseInt(e.key) as 1 | 2 | 3 | 4);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, showQuiz, showAnswer, handleStudyResult]);
-
-  // Auto-play TTS when answer is revealed in study mode
-  useEffect(() => {
-    if (currentView === 'study' && studyAutoPlay && showAnswer && studyEntries[currentStudyIndex]) {
-      const entry = studyEntries[currentStudyIndex];
-      const timer = setTimeout(() => {
-        ttsService.speak(entry.hanzi);
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [currentView, showAnswer, studyAutoPlay, currentStudyIndex, studyEntries]);
-
   const handleRetryInit = useCallback(() => {
     setInitError(false);
     setDictionaryReady(false);
@@ -808,31 +642,10 @@ function App() {
     window.location.reload();
   }, []);
 
-  const handleExport = useCallback(() => {
-    const data = hskDataService.exportData();
-    setExportData(data);
-  }, []);
-
-  const handleImport = useCallback(() => {
-    const success = hskDataService.importData(importData);
-    if (success) {
-      refreshStats();
-      setShowImportDialog(false);
-      setImportData('');
-      toast.success('Data imported successfully!');
-    } else {
-      toast.error('Failed to import data. Please check the format.');
-    }
-  }, [importData, refreshStats]);
-
   // Stable callback wrappers for view components
   const handleNavigateTo = useCallback((view: ViewMode) => setCurrentView(view), []);
-  const handleShowStudyDialog = useCallback(() => setShowStudyDialog(true), []);
-  const handleStartQuiz = useCallback(() => { setShowQuiz(true); setCurrentView('study'); }, []);
   const handleShowPomodoro = useCallback(() => setShowPomodoro(true), []);
   const handleShowFeatureGuide = useCallback(() => { dismissWelcomeBanner(); window.dispatchEvent(new CustomEvent('openhsk:show-feature-guide')); }, [dismissWelcomeBanner]);
-  const handleShowImportDialog = useCallback(() => setShowImportDialog(true), []);
-  const handleSetShowPomodoro = useCallback((open: boolean) => setShowPomodoro(open), []);
 
   const handleSearchQueryChange = useCallback((value: string) => { setSearchQuery(value); setBrowsePage(1); }, []);
   const handleSearchSubmit = useCallback((trimmed: string) => {
@@ -845,23 +658,16 @@ function App() {
   const handleClearSearch = useCallback(() => { setSearchQuery(''); setBrowsePage(1); }, []);
   const handleSelectedLevelChange = useCallback((value: number | 'all' | '7-9') => { setSelectedLevel(value); setBrowsePage(1); }, []);
   const handleSelectedPOSChange = useCallback((value: string) => { setSelectedPOS(value); setBrowsePage(1); }, []);
-  const handleListViewModeChange = useCallback((mode: ListViewMode) => setListViewMode(mode), []);
   const handleSelectHistoryTerm = useCallback((term: string) => { setSearchQuery(term); setBrowsePage(1); }, []);
   const handleClearHistory = useCallback(() => {
     setSearchHistory([]);
     try { localStorage.removeItem('openhsk.search-history.v1'); } catch { /* ignore */ }
   }, []);
 
-  const handleSetShowAnswer = useCallback((show: boolean) => setShowAnswer(show), []);
-  const handleSetStudyAutoPlay = useCallback((value: boolean | ((prev: boolean) => boolean)) => setStudyAutoPlay(value), []);
-  const handleSetShowQuiz = useCallback((show: boolean) => setShowQuiz(show), []);
-  const handleSetShowStudyComplete = useCallback((show: boolean) => setShowStudyComplete(show), []);
-
   const handleSetSelectedEntry = useCallback((entry: UnifiedEntry) => setSelectedEntry(entry), []);
   const handleSetDetailSequence = useCallback((seq: UnifiedEntry[] | ((prev: UnifiedEntry[]) => UnifiedEntry[])) => setDetailSequence(seq), []);
 
-  const handleSetProgressTab = useCallback((tab: ProgressTab) => setProgressTab(tab), []);
-  const handleSetFavorites = useCallback((favs: string[]) => setFavorites(favs), []);
+
 
   const handleSetStoryView = useCallback((view: 'browse' | 'reader') => setStoryView(view), []);
   const handleSetCurrentStoryIndex = useCallback((index: number | ((prev: number) => number)) => setCurrentStoryIndex(index), []);
@@ -934,15 +740,6 @@ function App() {
             >
               <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-4 h-4" loading="eager" />
               Browse
-            </Button>
-            <Button
-              variant={currentView === 'progress' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setCurrentView('progress')}
-              className="gap-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Progress
             </Button>
             <Button
               variant={currentView === 'audio' ? 'secondary' : 'ghost'}
@@ -1147,7 +944,6 @@ function App() {
             { view: 'landing' as const, label: 'Start', icon: <img src="/brand/logo-mark.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
             { view: 'dashboard' as const, label: 'Home', icon: <img src="/brand/icons/dictionary-stack.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
             { view: 'browse' as const, label: 'Browse', icon: <img src="/brand/icons/search-hanzi.svg" alt="" aria-hidden="true" className="w-5 h-5" loading="eager" /> },
-            { view: 'progress' as const, label: 'Progress', icon: <BarChart3 className="w-5 h-5" /> },
             { view: 'audio' as const, label: 'Audio', icon: <Volume2 className="w-5 h-5" /> },
             { view: 'stories' as const, label: 'Stories', icon: <ScrollText className={`w-5 h-5 ${!storyDataset ? 'opacity-50' : ''}`} />, disabled: !storyDataset },
             { view: 'books' as const, label: 'Books', icon: <Library className={`w-5 h-5 ${!bookDataset ? 'opacity-50' : ''}`} />, disabled: !bookDataset },
@@ -1190,7 +986,6 @@ function App() {
       <ErrorBoundary>
         <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6 overflow-x-hidden">
           <div key={currentView} className="animate-fade-in">
-            <Suspense fallback={<SectionLoader label="Loading..." />}>
               {currentView === 'landing' ? (
                 <LandingView totalWords={totalWords} onStartLearning={() => setCurrentView('dashboard')} onBrowseDictionary={() => setCurrentView('browse')} />
               ) : initError ? (
@@ -1226,17 +1021,10 @@ function App() {
                       dailyStats={dailyStats}
                       storyDataset={storyDataset}
                       bookDataset={bookDataset}
-                      showPomodoro={showPomodoro}
                       onDismissWelcomeBanner={dismissWelcomeBanner}
                       onShowFeatureGuide={handleShowFeatureGuide}
-                      onShowStudyDialog={handleShowStudyDialog}
-                      onStartQuiz={handleStartQuiz}
                       onNavigateTo={handleNavigateTo}
                       onShowPomodoro={handleShowPomodoro}
-                      onSetProgressTab={handleSetProgressTab}
-                      onOpenDetailView={openDetailView}
-                      onRefreshStats={refreshStats}
-                      onSetShowPomodoro={handleSetShowPomodoro}
                     />
                   )}
                   {currentView === 'browse' && (
@@ -1252,8 +1040,6 @@ function App() {
                       searchResults={searchResults}
                       favorites={favorites}
                       onToggleFavorite={toggleFavorite}
-                      listViewMode={listViewMode}
-                      onListViewModeChange={handleListViewModeChange}
                       browsePage={browsePage}
                       onBrowsePageChange={setBrowsePage}
                       deferredSearchQuery={deferredSearchQuery}
@@ -1274,42 +1060,6 @@ function App() {
                       onSetSelectedEntry={handleSetSelectedEntry}
                       onSetDetailSequence={handleSetDetailSequence}
                       onSetCurrentView={handleNavigateTo}
-                    />
-                  )}
-                  {currentView === 'study' && (
-                    <StudyView
-                      studyEntries={studyEntries}
-                      currentStudyIndex={currentStudyIndex}
-                      showAnswer={showAnswer}
-                      showQuiz={showQuiz}
-                      showStudyComplete={showStudyComplete}
-                      studyAutoPlay={studyAutoPlay}
-                      quizEntries={quizEntries}
-                      onSetShowAnswer={handleSetShowAnswer}
-                      onSetStudyAutoPlay={handleSetStudyAutoPlay}
-                      onHandleStudyResult={handleStudyResult}
-                      onSetShowQuiz={handleSetShowQuiz}
-                      onSetShowStudyComplete={handleSetShowStudyComplete}
-                      onSetCurrentView={handleNavigateTo}
-                      onStartStudySession={startStudySession}
-                      onRefreshStats={refreshStats}
-                    />
-                  )}
-                  {currentView === 'progress' && (
-                    <ProgressView
-                      progressTab={progressTab}
-                      onSetProgressTab={handleSetProgressTab}
-                      userStats={userStats}
-                      dueCount={dueCount}
-                      hskStats={hskStats}
-                      entries={entries}
-                      favorites={favorites}
-                      exportData={exportData}
-                      onHandleExport={handleExport}
-                      onShowImportDialog={handleShowImportDialog}
-                      onRefreshStats={refreshStats}
-                      onSetFavorites={handleSetFavorites}
-                      onOpenDetailView={openDetailView}
                     />
                   )}
                   {currentView === 'audio' && (
@@ -1347,107 +1097,11 @@ function App() {
                   )}
                 </>
               )}
-            </Suspense>
           </div>
         </main>
       </ErrorBoundary>
 
-      {/* Study Session Dialog */}
-      <Dialog open={showStudyDialog} onOpenChange={setShowStudyDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5" />
-              Start Study Session
-            </DialogTitle>
-            <DialogDescription>
-              {dueCount > 0
-                ? `${dueCount} cards due for review`
-                : "You're all caught up! Ready to learn new words?"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Session Size</Label>
-              <div className="flex gap-2">
-                {[10, 20, 50].map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setStudySessionSize(size)}
-                    className={`flex-1 rounded-lg border p-2.5 text-center text-sm font-medium transition-all ${
-                      studySessionSize === size
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border/50 hover:border-primary/30 hover:bg-muted/50'
-                    }`}
-                  >
-                    {size} cards
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Auto-Play Audio</Label>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={studyAutoPlay ? 'default' : 'outline'}
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={() => {
-                    setStudyAutoPlay(true);
-                    try { localStorage.setItem('openhsk.study-autoplay.v1', 'true'); } catch { /* ignore */ }
-                  }}
-                >
-                  <Headphones className="w-3.5 h-3.5" />
-                  On
-                </Button>
-                <Button
-                  variant={!studyAutoPlay ? 'default' : 'outline'}
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={() => {
-                    setStudyAutoPlay(false);
-                    try { localStorage.setItem('openhsk.study-autoplay.v1', 'false'); } catch { /* ignore */ }
-                  }}
-                >
-                  Off
-                </Button>
-              </div>
-            </div>
-            <Button
-              className="w-full"
-              onClick={() => {
-                setShowStudyDialog(false);
-                startStudySession(studySessionSize);
-              }}
-            >
-              <Play className="w-4 h-4 mr-2" />
-              Start Session
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Import Dialog */}
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import Data</DialogTitle>
-            <DialogDescription>Paste your exported JSON data below</DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={importData}
-            onChange={(e) => setImportData(e.target.value)}
-            placeholder="Paste JSON data here..."
-            className="font-mono text-sm h-48"
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowImportDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleImport}>Import</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
       <Toaster theme={darkMode ? 'dark' : 'light'} position="bottom-right" richColors />
     </div>
   );

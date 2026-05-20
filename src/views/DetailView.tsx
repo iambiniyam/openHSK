@@ -1,13 +1,10 @@
-import { Suspense, lazy, memo, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { memo, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
-import { SectionLoader } from './SectionLoader';
 import { buildDetailSequenceWindow } from '@/lib/detailSequence';
+import { WordDetail } from '@/components/WordDetail';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
 import type { ViewMode } from '@/App';
-
-const WordDetail = lazy(() => import('@/components/WordDetail'));
 
 
 interface DetailViewProps {
@@ -44,8 +41,6 @@ export const DetailView = memo(function DetailView({
 
   const backLabel =
     detailReturnView === 'dashboard' ? 'Dashboard'
-    : detailReturnView === 'progress' ? 'Progress'
-    : detailReturnView === 'study' ? 'Study'
     : detailReturnView === 'landing' ? 'Home'
     : 'Browse';
 
@@ -66,9 +61,8 @@ export const DetailView = memo(function DetailView({
   }, [onSetSelectedEntry, onSetDetailSequence]);
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+    <div className="space-y-4">
       <Button variant="ghost" onClick={() => onSetCurrentView(detailReturnView)} className="mb-2"><ChevronLeft className="w-4 h-4 mr-1" />Back to {backLabel}</Button>
-      <Suspense fallback={<SectionLoader label="Loading word details..." />}>
         <WordDetail
           key={selectedEntry.id}
           entry={selectedEntry}
@@ -81,7 +75,6 @@ export const DetailView = memo(function DetailView({
           onGoNext={() => navigateDetailByOffset(1)}
           navigationLabel={currentIndex >= 0 && sequence.length > 1 ? `${currentIndex + 1} / ${sequence.length}` : undefined}
         />
-      </Suspense>
-    </motion.div>
+    </div>
   );
 });

@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Volume2, Heart, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+
 import { ttsService } from '@/services/ttsService';
 import { Pagination } from './Pagination';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
@@ -81,11 +81,7 @@ export const PaginatedWordList = ({
 
   if (entries.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center h-[250px] sm:h-[350px] text-muted-foreground"
-      >
+      <div className="flex flex-col items-center justify-center h-[250px] sm:h-[350px] text-muted-foreground">
         <img
           src="/brand/icons/search-hanzi.svg"
           alt="Search"
@@ -94,7 +90,7 @@ export const PaginatedWordList = ({
         />
         <p className="text-base sm:text-lg font-medium">No words found</p>
         <p className="text-xs sm:text-sm mt-1">Try a different search term or filter</p>
-      </motion.div>
+      </div>
     );
   }
 
@@ -108,16 +104,11 @@ export const PaginatedWordList = ({
 
       {/* Word Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {paginatedEntries.map((entry, index) => {
+        {paginatedEntries.map((entry) => {
           const isFav = favoriteSet.has(entry.id);
           
           return (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(index * 0.03, 0.3) }}
-            >
+            <div key={entry.id}>
               <Card
                 className="p-3 sm:p-4 cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-primary/50 group h-full overflow-hidden"
                 onClick={() => onEntryClick(entry)}
@@ -188,20 +179,13 @@ export const PaginatedWordList = ({
                     </div>
                   )}
                   
-                  {/* Footer with stroke count if available */}
                   <div className="mt-auto pt-2 sm:pt-3 flex items-center justify-between">
-                    {entry.strokeCount ? (
-                      <span className="text-[10px] sm:text-xs text-muted-foreground">
-                        {entry.strokeCount} strokes
-                      </span>
-                    ) : (
-                      <span />
-                    )}
+                    <span />
                     <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
               </Card>
-            </motion.div>
+            </div>
           );
         })}
       </div>

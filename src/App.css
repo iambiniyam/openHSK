@@ -267,6 +267,11 @@ ruby.ruby-char.ruby-hover:hover rt {
   100% { background-position: 200% 0; }
 }
 
+@keyframes progress-shimmer {
+  0% { left: -33%; }
+  100% { left: 100%; }
+}
+
 .shimmer {
   background: linear-gradient(
     105deg,
@@ -331,6 +336,7 @@ ruby.ruby-char.ruby-hover:hover rt {
 }
 
 .animate-fade-in { animation: fade-in 0.35s ease-out both; }
+.animate-progress-shimmer { animation: progress-shimmer 1.2s linear infinite; }
 .animate-slide-up { animation: slide-up 0.4s var(--ease-out-expo) both; }
 .animate-slide-down { animation: slide-down 0.3s ease-out both; }
 .animate-scale-in { animation: scale-in 0.25s var(--ease-out-expo) both; }

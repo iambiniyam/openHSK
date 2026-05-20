@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+
 import {
   BookOpen,
   Search,
@@ -96,10 +96,7 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
     <div className="space-y-4">
       {/* Header Stats */}
       {meta && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <div>
           <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
             <CardContent className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -124,7 +121,7 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       )}
 
       {/* Search and Filter */}
@@ -189,17 +186,12 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
         </Empty>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredStories.map((story, i) => {
+          {filteredStories.map((story) => {
             const levelColor = hskLevelColors[story.hsk_level] || hskLevelColors[7];
             const readingMinutes = Math.max(1, Math.round((story.word_count || 0) / 80));
 
             return (
-              <motion.div
-                key={story.story_id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.03, 0.3), duration: 0.3 }}
-              >
+              <div key={story.story_id}>
                 <Card
                   className="cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group h-full overflow-hidden border-l-4"
                   style={{ borderLeftColor: `hsl(var(--primary) / ${0.3 + (story.hsk_level * 0.08)})` }}
@@ -248,7 +240,7 @@ export const StoryBrowser = ({ stories, meta, onStorySelect }: StoryBrowserProps
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             );
           })}
         </div>

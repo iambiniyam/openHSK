@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo } from 'react';
-import { SectionLoader } from './SectionLoader';
+import { SectionLoader } from '@/components/SectionLoader';
 
 const LandingPage = lazy(() => import('@/components/LandingPage'));
 

@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo } from 'react';
-import { AnimatePresence } from 'framer-motion';
 
 import { InlineDictionaryPopup } from './InlineDictionaryPopup';
 import { alignPinyinToChars } from '@/lib/pinyinAligner';
@@ -78,7 +77,6 @@ export function ChineseText({
             return rubyElement;
           })}
         </span>
-        <AnimatePresence>
           {popup && (
             <InlineDictionaryPopup
               hanzi={popup.hanzi}
@@ -87,7 +85,6 @@ export function ChineseText({
               onOpenDetail={handlePopupOpenDetail}
             />
           )}
-        </AnimatePresence>
       </>
     );
   }
@@ -114,7 +111,6 @@ export function ChineseText({
           );
         })}
       </span>
-      <AnimatePresence>
         {popup && (
           <InlineDictionaryPopup
             hanzi={popup.hanzi}
@@ -123,7 +119,6 @@ export function ChineseText({
             onOpenDetail={handlePopupOpenDetail}
           />
         )}
-      </AnimatePresence>
     </>
   );
 }

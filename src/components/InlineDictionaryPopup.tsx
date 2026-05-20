@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { X, Volume2, BookOpen, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +20,6 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
   const isFavorite = entry ? hskDataService.getFavorites().includes(entry.id) : false;
   const [, forceUpdate] = useState({});
 
-  // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
@@ -32,7 +30,6 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  // Close on Escape
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -43,12 +40,8 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
 
   if (!entry) {
     return (
-      <motion.div
+      <div
         ref={popupRef}
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 8 }}
-        transition={{ duration: 0.15 }}
         style={{
           position: 'fixed',
           left: Math.max(8, Math.min(position.x, window.innerWidth - 272)),
@@ -61,7 +54,7 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
           <p className="text-lg font-bold text-foreground mb-1">{hanzi}</p>
           <p>No dictionary entry found</p>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
@@ -69,12 +62,8 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
   const hskLabel = hskLevel ? (hskLevel >= 7 ? 'HSK 7-9' : `HSK ${hskLevel}`) : null;
 
   return (
-    <motion.div
+    <div
       ref={popupRef}
-      initial={{ opacity: 0, scale: 0.95, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: 8 }}
-      transition={{ duration: 0.15 }}
       style={{
         position: 'fixed',
         left: Math.max(8, Math.min(position.x, window.innerWidth - 328)),
@@ -83,7 +72,6 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
       }}
       className="w-80 max-w-[calc(100vw-16px)] bg-card border border-border rounded-xl shadow-xl overflow-hidden"
     >
-        {/* Header */}
         <div className="p-4 pb-3">
           <div className="flex items-start justify-between">
             <div>
@@ -105,7 +93,6 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
           )}
         </div>
 
-        {/* Definitions */}
         <div className="px-4 pb-3">
           <div className="flex flex-wrap gap-1.5">
             {entry.definitions.slice(0, 4).map((def, i) => (
@@ -119,7 +106,6 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2 px-4 pb-4">
           <Button size="sm" variant="outline" onClick={() => ttsService.speak(entry.hanzi)}>
             <Volume2 className="w-3.5 h-3.5 mr-1.5" />
@@ -143,7 +129,7 @@ export function InlineDictionaryPopup({ hanzi, position, onClose, onOpenDetail }
             </Button>
           )}
         </div>
-      </motion.div>
+      </div>
   );
 }
 

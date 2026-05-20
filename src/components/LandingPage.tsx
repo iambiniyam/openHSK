@@ -1,5 +1,4 @@
-import { useRef, useEffect } from "react";
-import { motion, useInView, animate } from "framer-motion";
+import { useRef, useEffect, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
@@ -23,15 +22,6 @@ interface LandingPageProps {
   onBrowseDictionary: () => void;
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0 },
-};
-
-const stagger = {
-  visible: { transition: { staggerChildren: 0.05 } },
-};
-
 const stats = [
   { value: "9", suffix: "", label: "HSK Levels" },
   { value: "5K+", suffix: "", label: "Words" },
@@ -54,25 +44,63 @@ const features = [
 
 function AnimatedCounter({ value }: { value: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true });
-
-  // If value is purely numeric, animate it. Otherwise just show it.
+  const [hasAnimated, setHasAnimated] = useState(false);
   const isPureNumber = /^\d+$/.test(value);
   const numeric = isPureNumber ? parseInt(value, 10) : NaN;
 
   useEffect(() => {
-    if (!isInView || !ref.current || !isPureNumber) return;
-    const controls = animate(0, numeric, {
-      duration: 1.2,
-      ease: "circOut",
-      onUpdate: (v) => {
-        if (ref.current) ref.current.textContent = Math.round(v).toString();
+    const el = ref.current;
+    if (!el || hasAnimated || !isPureNumber) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || hasAnimated) return;
+        observer.disconnect();
+        setHasAnimated(true);
+        const start = performance.now();
+        const duration = 1200;
+        const frame = (now: number) => {
+          const t = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - t, 3);
+          el.textContent = Math.round(eased * numeric).toString();
+          if (t < 1) requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
       },
-    });
-    return () => controls.stop();
-  }, [isInView, numeric, isPureNumber]);
+      { threshold: 0.3 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [numeric, isPureNumber, hasAnimated]);
 
   return <span ref={ref}>{value}</span>;
+}
+
+function RevealSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ${revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${className}`}
+    >
+      {children}
+    </div>
+  );
 }
 
 export const LandingPage = ({
@@ -83,12 +111,7 @@ export const LandingPage = ({
   return (
     <div className="space-y-12 sm:space-y-16 pb-8">
       {/* ── Hero ── */}
-      <motion.section
-        initial="hidden"
-        animate="visible"
-        variants={stagger}
-        className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-background via-primary/[0.02] to-background px-6 py-12 sm:py-16 lg:py-20"
-      >
+      <section className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-background via-primary/[0.02] to-background px-6 py-12 sm:py-16 lg:py-20 animate-fade-in">
         {/* Background glow */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-32 -right-32 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[100px]" />
@@ -96,7 +119,7 @@ export const LandingPage = ({
         </div>
 
         <div className="relative max-w-3xl mx-auto text-center space-y-6">
-          <motion.div variants={fadeUp}>
+          <div className="animate-fade-in">
             <Badge
               variant="secondary"
               className="gap-1.5 px-3 py-1 text-[11px] font-medium rounded-full"
@@ -104,9 +127,9 @@ export const LandingPage = ({
               <Sparkles className="h-3 w-3" />
               Free &amp; Open Source
             </Badge>
-          </motion.div>
+          </div>
 
-          <motion.div variants={fadeUp} className="space-y-4">
+          <div className="space-y-4">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-balance">
               Master Chinese
               <span className="block mt-1 bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
@@ -117,12 +140,9 @@ export const LandingPage = ({
               A modern, open platform for HSK vocabulary, writing, reading, and
               daily review.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            variants={fadeUp}
-            className="flex flex-wrap items-center justify-center gap-3"
-          >
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <Button
               size="lg"
               className="h-11 px-6 text-sm rounded-xl shadow-lg shadow-primary/20"
@@ -142,13 +162,10 @@ export const LandingPage = ({
                 ? `${totalWords.toLocaleString()} words`
                 : "Dictionary"}
             </Button>
-          </motion.div>
+          </div>
 
           {/* Stats */}
-          <motion.div
-            variants={fadeUp}
-            className="grid grid-cols-4 gap-2 max-w-lg mx-auto pt-2"
-          >
+          <div className="grid grid-cols-4 gap-2 max-w-lg mx-auto pt-2">
             {stats.map((stat) => (
               <div
                 key={stat.label}
@@ -163,29 +180,17 @@ export const LandingPage = ({
                 </div>
               </div>
             ))}
-          </motion.div>
+          </div>
         </div>
-      </motion.section>
+      </section>
 
       {/* ── Features ── */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-60px" }}
-        variants={stagger}
-        className="max-w-3xl mx-auto"
-      >
-        <motion.h2
-          variants={fadeUp}
-          className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-6"
-        >
+      <RevealSection className="max-w-3xl mx-auto">
+        <h2 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-6">
           Features
-        </motion.h2>
+        </h2>
 
-        <motion.div
-          variants={fadeUp}
-          className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3"
-        >
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
           {features.map((feature) => {
             const Icon = feature.icon;
             return (
@@ -202,27 +207,18 @@ export const LandingPage = ({
               </div>
             );
           })}
-        </motion.div>
-      </motion.section>
+        </div>
+      </RevealSection>
 
       {/* ── Bottom CTA ── */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-60px" }}
-        variants={stagger}
-        className="text-center space-y-4 px-4"
-      >
-        <motion.h2
-          variants={fadeUp}
-          className="text-xl sm:text-2xl font-bold tracking-tight"
-        >
+      <RevealSection className="text-center space-y-4 px-4">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
           Ready to start?
-        </motion.h2>
-        <motion.p variants={fadeUp} className="text-sm text-muted-foreground">
+        </h2>
+        <p className="text-sm text-muted-foreground">
           No account. No paywall. Works offline.
-        </motion.p>
-        <motion.div variants={fadeUp}>
+        </p>
+        <div>
           <Button
             size="lg"
             className="h-11 px-8 text-sm rounded-xl"
@@ -231,16 +227,11 @@ export const LandingPage = ({
             Get Started Free
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-        </motion.div>
-      </motion.section>
+        </div>
+      </RevealSection>
 
       {/* ── Developer Link ── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="text-center pb-4"
-      >
+      <div className="text-center pb-4 animate-fade-in">
         <a
           href="https://thebini.com/"
           target="_blank"
@@ -249,7 +240,7 @@ export const LandingPage = ({
         >
           Made by Bini
         </a>
-      </motion.div>
+      </div>
     </div>
   );
 };

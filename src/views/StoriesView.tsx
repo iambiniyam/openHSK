@@ -1,8 +1,7 @@
 import { Suspense, lazy, memo } from 'react';
-import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SectionLoader } from './SectionLoader';
+import { SectionLoader } from '@/components/SectionLoader';
 import { unifiedDictionary } from '@/services/unifiedDictionaryService';
 import type { StoryEntry, StoryDataset } from '@/types/stories';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
@@ -30,9 +29,9 @@ export const StoriesView = memo(function StoriesView({
 }: StoriesViewProps) {
   if (!storyDataset) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div>
         <SectionLoader label="Loading story dataset..." />
-      </motion.div>
+      </div>
     );
   }
 
@@ -48,7 +47,7 @@ export const StoriesView = memo(function StoriesView({
     };
 
     return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => onSetStoryView('browse')}>
             <ChevronLeft className="w-4 h-4 mr-1" />Back to Stories
@@ -70,7 +69,7 @@ export const StoriesView = memo(function StoriesView({
             }
           />
         </Suspense>
-      </motion.div>
+      </div>
     );
   }
 
@@ -81,7 +80,7 @@ export const StoriesView = memo(function StoriesView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div>
       <Suspense fallback={<SectionLoader label="Loading story browser..." />}>
         <StoryBrowser
           stories={storyDataset.stories}
@@ -89,6 +88,6 @@ export const StoriesView = memo(function StoriesView({
           onStorySelect={handleStorySelect}
         />
       </Suspense>
-    </motion.div>
+    </div>
   );
 });

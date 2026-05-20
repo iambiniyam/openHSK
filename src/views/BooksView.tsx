@@ -1,8 +1,7 @@
 import { Suspense, lazy, memo } from 'react';
-import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SectionLoader } from './SectionLoader';
+import { SectionLoader } from '@/components/SectionLoader';
 import { unifiedDictionary } from '@/services/unifiedDictionaryService';
 import type { Book, BookDataset } from '@/types/books';
 import type { UnifiedEntry } from '@/services/unifiedDictionaryService';
@@ -30,9 +29,9 @@ export const BooksView = memo(function BooksView({
 }: BooksViewProps) {
   if (!bookDataset) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div>
         <SectionLoader label="Loading book dataset..." />
-      </motion.div>
+      </div>
     );
   }
 
@@ -48,7 +47,7 @@ export const BooksView = memo(function BooksView({
     };
 
     return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => onSetBookView('browse')}>
             <ChevronLeft className="w-4 h-4 mr-1" />Back to Books
@@ -71,7 +70,7 @@ export const BooksView = memo(function BooksView({
             }
           />
         </Suspense>
-      </motion.div>
+      </div>
     );
   }
 
@@ -82,7 +81,7 @@ export const BooksView = memo(function BooksView({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div>
       <Suspense fallback={<SectionLoader label="Loading book browser..." />}>
         <BookBrowser
           books={bookDataset.books}
@@ -90,6 +89,6 @@ export const BooksView = memo(function BooksView({
           onBookSelect={handleBookSelect}
         />
       </Suspense>
-    </motion.div>
+    </div>
   );
 });

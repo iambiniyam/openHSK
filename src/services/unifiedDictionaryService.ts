@@ -1,67 +1,23 @@
 import type { HSKEntry } from '@/types/hsk';
-import type { HanziCharacter, HanziGraphics } from '@/types/hanzi';
-import { fetchWithCacheFallback } from '@/lib/offlineFetch';
+import { loadHskDataset } from '@/lib/datasetLoader';
+import { loadDataProgressively, type ProgressCallback } from '@/lib/progressiveLoader';
 import { yieldToMain } from '@/lib/yieldToMain';
-import {
-  loadCedictEnrichmentDataset,
-  loadGraphicsDatasetPartsText,
-  loadHskDataset,
-  seedHskDataset,
-  type CedictEnrichmentEntry,
-  loadTatoebaExamplesDataset,
-  type TatoebaExample,
-} from '@/lib/datasetLoader';
-import { downloadPhases, type ProgressCallback } from '@/lib/progressiveLoader';
-import type { CedictEnrichmentDataset, TatoebaExamplesDataset } from '@/lib/datasetLoader';
-import { loadRuntimeCache, saveRuntimeCache } from '@/lib/runtimeCache';
 import { stripTones } from '@/lib/pinyin';
 
-// Unified Dictionary Entry - combines HSK + makemeahanzi + additional data
 export interface UnifiedEntry {
   id: string;
   hanzi: string;
   traditional?: string;
   pinyin: string;
-  altPinyin?: string[];
-  pinyinTones: number[]; // Tone numbers [1, 2, 3, 4, 0]
+  pinyinTones: number[];
   definitions: string[];
-  definitionSources?: Array<'hsk' | 'cedict'>;
-  qualityScore?: number;
   hskLevel?: number;
   partOfSpeech: string[];
-  
-  // Character data (from makemeahanzi)
-  strokeCount?: number;
-  radical?: string;
-  decomposition?: string;
-  etymology?: {
-    type: 'ideographic' | 'pictophonetic';
-    hint?: string;
-    phonetic?: string;
-    semantic?: string;
-  };
-  
-  // Multi-character word character breakdown
-  characterBreakdown?: {
-    char: string;
-    pinyin: string;
-    definition?: string;
-    strokeCount?: number;
-    radical?: string;
-    etymology?: UnifiedEntry['etymology'];
-  }[];
-  
-  // Usage data
-  frequency?: number; // Word frequency rank
   examples: ExampleSentence[];
-  
-  // Related words
   synonyms: RelatedWord[];
   antonyms: RelatedWord[];
   collocations: string[];
   wordFamily: RelatedWord[];
-  
-  // Learning aids
   mnemonic?: string;
   commonMistakes?: string[];
   usageNotes?: string;
@@ -72,7 +28,6 @@ export interface ExampleSentence {
   pinyin: string;
   english: string;
   source?: string;
-  sourceUrl?: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
 }
 
@@ -89,42 +44,13 @@ export interface SearchResult {
   matchScore: number;
 }
 
-// Character stroke data from graphics.txt
-interface CharacterGraphics {
-  character: string;
-  strokes: string[];
-  medians: number[][][];
-}
-
-interface CharacterDictionaryData {
-  character: string;
-  definition?: string;
-  pinyin?: string[];
-  decomposition: string;
-  etymology?: UnifiedEntry['etymology'];
-  radical: string;
-  matches?: (number[] | null)[];
-}
-
-type NetworkConnection = {
-  saveData?: boolean;
-  effectiveType?: string;
-};
-
-const LOW_BANDWIDTH_TYPES = new Set(['slow-2g', '2g']);
-
 class UnifiedDictionaryService {
   private entries: Map<string, UnifiedEntry> = new Map();
-  private hanziIndex: Map<string, string[]> = new Map(); // hanzi -> entry IDs
-  private pinyinIndex: Map<string, string[]> = new Map(); // pinyin (no tones) -> entry IDs
-  private definitionIndex: Map<string, string[]> = new Map(); // word -> entry IDs
+  private hanziIndex: Map<string, string[]> = new Map();
+  private pinyinIndex: Map<string, string[]> = new Map();
+  private definitionIndex: Map<string, string[]> = new Map();
   private hskData: HSKEntry[] = [];
-  private charData: Map<string, CharacterDictionaryData> = new Map(); // makemeahanzi dictionary data
-  private graphicsData: Map<string, CharacterGraphics> = new Map(); // stroke graphics data
-  private cedictEnrichment: Map<string, CedictEnrichmentEntry> = new Map();
-  private tatoebaExamples: Map<string, ExampleSentence[]> = new Map();
   private loaded = false;
-  private tiersLoaded = 0;
   private loadPromise: Promise<void> | null = null;
   private loadAbortController: AbortController | null = null;
   private searchCache = new Map<string, SearchResult[]>();
@@ -133,57 +59,17 @@ class UnifiedDictionaryService {
   async initialize(): Promise<void> {
     if (this.loaded) return;
     if (this.loadPromise) return this.loadPromise;
-    
     this.loadPromise = this.loadAllData();
     return this.loadPromise;
   }
 
-  /**
-   * Progressive initialization with real-time progress updates.
-   * 
-   * Reports download progress per file so the UI can show a loading screen
-   * with actual progress bars. Still returns when everything is ready.
-   */
-  /**
-   * Initialize with progressive loading. Returns when tier 1 (vocab) is ready.
-   * Remaining tiers (characters, graphics, enrichment, examples) load in background.
-   * Check `getTiersLoaded()` or `isTierReady(tier)` for progressive feature availability.
-   */
   async initializeWithProgress(onProgress: ProgressCallback): Promise<void> {
     if (this.loaded) return;
-    if (this.loadPromise) {
-      // If already loading, wait for tier 1
-      if (this.tiersLoaded >= 1) return;
-      await this.waitForTier(1);
-      return;
-    }
-
-    // Try IndexedDB cache first — instant restore on repeat visits
-    if (await this.tryLoadFromCache()) {
-      seedHskDataset(this.hskData);
-      this.loaded = true;
-      this.tiersLoaded = 5;
-      onProgress({
-        phaseId: 'done',
-        phaseLabel: 'Ready',
-        phaseIndex: 0,
-        totalPhases: 1,
-        filePath: '',
-        fileProgress: 100,
-        phaseProgress: 100,
-        overallProgress: 100,
-        bytesLoaded: 0,
-        bytesTotal: 0,
-        status: 'complete',
-      });
-      return;
-    }
+    if (this.loadPromise) return this.loadPromise;
 
     this.loadAbortController = new AbortController();
-    // Start two-stage loading; resolves after tier 1, continues in background
     this.loadPromise = this.loadAllDataProgressive(onProgress, this.loadAbortController.signal);
-    // Wait for tier 1 before returning
-    await this.waitForTier(1);
+    return this.loadPromise;
   }
 
   abortLoad(): void {
@@ -192,579 +78,84 @@ class UnifiedDictionaryService {
     this.loadPromise = null;
   }
 
-  /** Returns how many tiers are fully loaded (0 = none, 1 = vocab, 5 = everything) */
-  getTiersLoaded(): number { return this.tiersLoaded; }
-
-  /** Check if a specific data tier is ready (1=vocab, 2=characters, 3=graphics, 4=enrichment, 5=examples) */
-  isTierReady(tier: number): boolean {
-    return this.tiersLoaded >= tier || this.loaded;
-  }
-
-  private async waitForTier(target: number): Promise<void> {
-    while (this.tiersLoaded < target && !this.loaded) {
-      await new Promise(r => setTimeout(r, 50));
-    }
-  }
-
   private async loadAllData(): Promise<void> {
-    console.time('Dictionary Load');
-    
     try {
-      const shouldLoadTatoebaExamples = this.shouldLoadTatoebaExamples();
-      const [hskData, dictText, graphicsParts, cedictDataset, tatoebaDataset] = await Promise.all([
-        loadHskDataset<HSKEntry>(),
-        fetchWithCacheFallback('/dictionary.txt').then((response) => response.text()),
-        loadGraphicsDatasetPartsText(),
-        loadCedictEnrichmentDataset(),
-        shouldLoadTatoebaExamples
-          ? loadTatoebaExamplesDataset()
-          : Promise.resolve(null),
-      ]);
-
-      this.hskData = hskData;
-      await this.parseCharacterData(dictText);
-      for (const graphicsPart of graphicsParts) {
-        await this.parseGraphicsData(graphicsPart);
-      }
-
-      this.cedictEnrichment.clear();
-      if (cedictDataset?.entries?.length) {
-        for (const entry of cedictDataset.entries) {
-          this.cedictEnrichment.set(entry.hanzi, entry);
-        }
-      }
-
-      this.tatoebaExamples.clear();
-      if (tatoebaDataset?.words?.length) {
-        for (const wordEntry of tatoebaDataset.words) {
-          if (!wordEntry?.hanzi || !Array.isArray(wordEntry.examples) || wordEntry.examples.length === 0) {
-            continue;
-          }
-
-          const examples = wordEntry.examples
-            .filter((example): example is TatoebaExample => {
-              return Boolean(example && example.chinese && example.english && example.sourceId);
-            })
-            .map((example) => ({
-              chinese: example.chinese,
-              pinyin: example.pinyin,
-              english: example.english,
-              source: `Tatoeba #${example.sourceId}`,
-              sourceUrl: `https://tatoeba.org/en/sentences/show/${example.sourceId}`,
-              difficulty: example.difficulty,
-            }));
-
-          if (examples.length > 0) {
-            this.tatoebaExamples.set(wordEntry.hanzi, examples);
-          }
-        }
-      }
-      
-      // Build unified entries
+      this.hskData = await loadHskDataset<HSKEntry>();
       await this.buildUnifiedEntries();
-      
-      // Build search indexes
       await this.buildIndexes();
-      
       this.loaded = true;
-      console.timeEnd('Dictionary Load');
-      console.log(`Loaded ${this.entries.size} unified entries`);
-      console.log(`Character data: ${this.charData.size} entries`);
-      console.log(`Graphics data: ${this.graphicsData.size} entries`);
-      console.log(`CEDICT enrichment: ${this.cedictEnrichment.size} entries`);
-      console.log(`Tatoeba example coverage: ${this.tatoebaExamples.size} entries`);
-      if (!shouldLoadTatoebaExamples) {
-        console.log('Skipped Tatoeba examples on low-bandwidth connection.');
-      }
-
-      this.persistToCache();
     } catch (error) {
       console.error('Failed to load dictionary:', error);
       throw error;
     }
   }
 
-  private async loadAllDataProgressive(
-    onProgress: ProgressCallback,
-    signal: AbortSignal,
-  ): Promise<void> {
-    console.time('Dictionary Progressive Load');
-    
+  private async loadAllDataProgressive(onProgress: ProgressCallback, signal: AbortSignal): Promise<void> {
     try {
-      // ── Stage 1: Download vocab only (phases 0-1) ──
-      const vocabData = await downloadPhases(0, 1, onProgress, signal);
-
-      this.hskData = [...(vocabData.hskPart1 as HSKEntry[]), ...(vocabData.hskPart2 as HSKEntry[])];
-
-      // Build entries from just HSK data (no charData, graphics, enrichment, examples yet)
+      const data = await loadDataProgressively(onProgress, signal);
+      this.hskData = [...(data.hskPart1 as HSKEntry[]), ...(data.hskPart2 as HSKEntry[])];
       await this.buildUnifiedEntries();
       await this.buildIndexes();
-
-      this.tiersLoaded = 1;
-      // initializeWithProgress's waitForTier(1) will now resolve, letting the app become interactive
-
-      // ── Stage 2: Download remaining data (phases 2-5) ──
-      const remainingData = await downloadPhases(2, 5, onProgress, signal, new Set(['stroke-graphics']));
-
-      // Kick off graphics download in background while we process enrichment
-      this.ensureGraphicsLoaded().catch(() => {});
-
-      // Parse character data and enrich entries
-      if (remainingData.dictionaryText) {
-        await this.parseCharacterData(remainingData.dictionaryText);
-        await this.enrichWithCharacterData();
-        this.tiersLoaded = 2;
-      }
-
-      // CEDICT enrichment
-      const cedictDataset = remainingData.cedictDataset as CedictEnrichmentDataset | null;
-      if (cedictDataset?.entries?.length) {
-        this.cedictEnrichment.clear();
-        for (const entry of cedictDataset.entries) {
-          this.cedictEnrichment.set(entry.hanzi, entry);
-        }
-        await this.enrichWithCedict();
-        this.tiersLoaded = 4;
-      }
-
-      // Tatoeba examples
-      const tatoebaDataset = remainingData.tatoebaDataset as TatoebaExamplesDataset | null;
-      if (tatoebaDataset?.words?.length) {
-        this.tatoebaExamples.clear();
-        for (const wordEntry of tatoebaDataset.words) {
-          if (!wordEntry?.hanzi || !Array.isArray(wordEntry.examples) || wordEntry.examples.length === 0) continue;
-
-          const examples = wordEntry.examples
-            .filter((example: TatoebaExample): example is TatoebaExample => {
-              return Boolean(example && example.chinese && example.english && example.sourceId);
-            })
-            .map((example: TatoebaExample) => ({
-              chinese: example.chinese,
-              pinyin: example.pinyin,
-              english: example.english,
-              source: `Tatoeba #${example.sourceId}`,
-              sourceUrl: `https://tatoeba.org/en/sentences/show/${example.sourceId}`,
-              difficulty: example.difficulty,
-            }));
-
-          if (examples.length > 0) {
-            this.tatoebaExamples.set(wordEntry.hanzi, examples);
-          }
-        }
-        await this.enrichWithExamples();
-        this.tiersLoaded = 5;
-      }
-
       this.loaded = true;
-      console.timeEnd('Dictionary Progressive Load');
-      console.log(`Loaded ${this.entries.size} unified entries`);
-      console.log(`Character data: ${this.charData.size} entries`);
-      console.log(`Graphics data: ${this.graphicsData.size} entries`);
-      console.log(`CEDICT enrichment: ${this.cedictEnrichment.size} entries`);
-      console.log(`Tatoeba example coverage: ${this.tatoebaExamples.size} entries`);
-
-      this.persistToCache();
     } catch (error) {
       console.error('Failed to load dictionary:', error);
       throw error;
-    }
-  }
-
-  private async enrichWithCharacterData(): Promise<void> {
-    const entries = Array.from(this.entries.values());
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      const charDataList = entry.hanzi.split('').map(char => this.charData.get(char));
-      const mainChar = charDataList[0];
-
-      if (mainChar) {
-        entry.strokeCount = mainChar.matches?.length || entry.hanzi.length;
-        if (entry.hanzi.length === 1) {
-          entry.radical = mainChar.radical;
-          entry.decomposition = mainChar.decomposition;
-          entry.etymology = mainChar.etymology;
-        }
-      }
-
-      const breakdown = this.buildCharacterBreakdown(entry.hanzi);
-      if (breakdown?.length > 0) {
-        entry.characterBreakdown = breakdown;
-      }
-
-      if (i % 500 === 499) await yieldToMain();
-    }
-  }
-
-  private async enrichWithCedict(): Promise<void> {
-    const entries = Array.from(this.entries.values());
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      const cedict = this.cedictEnrichment.get(entry.hanzi);
-      if (cedict) {
-        entry.definitions = this.mergeDefinitions(entry.definitions, cedict.definitions);
-        entry.definitionSources = ['hsk', 'cedict'];
-        entry.qualityScore = cedict.qualityScore ?? entry.qualityScore;
-
-        const alt = cedict.pinyin.filter(p => p !== entry.pinyin);
-        if (alt.length > 0) {
-          entry.altPinyin = alt;
-        }
-
-        // Rebuild definition index with new definitions
-        for (const def of entry.definitions) {
-          const words = def.toLowerCase().split(/\s+/);
-          for (const word of words) {
-            const cleanWord = word.replace(/[^a-z]/g, '');
-            if (cleanWord.length > 2) {
-              const existingDef = this.definitionIndex.get(cleanWord) || [];
-              if (!existingDef.includes(entry.id)) {
-                existingDef.push(entry.id);
-                this.definitionIndex.set(cleanWord, existingDef);
-              }
-            }
-          }
-        }
-      }
-      if (i % 500 === 499) await yieldToMain();
-    }
-  }
-
-  private async enrichWithExamples(): Promise<void> {
-    const entries = Array.from(this.entries.values());
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      const externalExamples = this.tatoebaExamples.get(entry.hanzi);
-      if (externalExamples?.length) {
-        entry.examples = this.mergeExamples(entry.examples, externalExamples);
-      }
-      if (i % 500 === 499) await yieldToMain();
-    }
-  }
-
-  private _graphicsLoadPromise: Promise<void> | null = null;
-
-  /** Ensure stroke graphics data is loaded (loaded on demand, not at startup) */
-  async ensureGraphicsLoaded(): Promise<void> {
-    if (this.graphicsData.size > 0) return;
-    if (this._graphicsLoadPromise) return this._graphicsLoadPromise;
-    this._graphicsLoadPromise = this._loadGraphicsData();
-    return this._graphicsLoadPromise;
-  }
-
-  private async _loadGraphicsData(): Promise<void> {
-    try {
-      const parts = await loadGraphicsDatasetPartsText();
-      for (const g of parts) {
-        await this.parseGraphicsData(g);
-      }
-    } catch (err) {
-      console.error('Failed to load graphics data:', err);
-      this._graphicsLoadPromise = null;
-    }
-  }
-
-  private shouldLoadTatoebaExamples(): boolean {
-    if (typeof navigator === 'undefined') {
-      return true;
-    }
-
-    const nav = navigator as Navigator & { connection?: NetworkConnection };
-    const connection = nav.connection;
-    if (!connection) {
-      return true;
-    }
-
-    if (connection.saveData) {
-      return false;
-    }
-
-    return connection.effectiveType
-      ? !LOW_BANDWIDTH_TYPES.has(connection.effectiveType)
-      : true;
-  }
-
-  private async tryLoadFromCache(): Promise<boolean> {
-    try {
-      const cache = await loadRuntimeCache();
-      if (!cache) return false;
-
-      this.entries = new Map(cache.entries as [string, UnifiedEntry][]);
-      this.hanziIndex = new Map(cache.hanziIndex);
-      this.pinyinIndex = new Map(cache.pinyinIndex);
-      this.definitionIndex = new Map(cache.definitionIndex);
-      this.hskData = cache.hskData as HSKEntry[];
-      this.charData = new Map(cache.charData as [string, CharacterDictionaryData][]);
-      this.graphicsData = new Map(cache.graphicsData as [string, CharacterGraphics][]);
-      this.cedictEnrichment = new Map(cache.cedictEnrichment as [string, CedictEnrichmentEntry][]);
-      this.tatoebaExamples = new Map(cache.tatoebaExamples as [string, ExampleSentence[]][]);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private getCacheVersion(): string {
-    const files = [
-      '/hsk3.0.part1.json',
-      '/hsk3.0.part2.json',
-      '/dictionary.txt',
-      '/graphics.part1.txt',
-      '/graphics.part2.txt',
-      '/quality/hsk-cedict-enrichment.v1.json',
-      '/quality/hsk-tatoeba-examples.v1.json',
-    ];
-    return `1|${files.join(',')}`;
-  }
-
-  private async persistToCache(): Promise<void> {
-    saveRuntimeCache({
-      version: this.getCacheVersion(),
-      entries: Array.from(this.entries.entries()),
-      hanziIndex: Array.from(this.hanziIndex.entries()),
-      pinyinIndex: Array.from(this.pinyinIndex.entries()),
-      definitionIndex: Array.from(this.definitionIndex.entries()),
-      hskData: this.hskData,
-      charData: Array.from(this.charData.entries()),
-      graphicsData: Array.from(this.graphicsData.entries()),
-      cedictEnrichment: Array.from(this.cedictEnrichment.entries()),
-      tatoebaExamples: Array.from(this.tatoebaExamples.entries()),
-    }).then((ok: boolean) => {
-      if (ok) console.log('Dictionary cached to IndexedDB');
-    });
-  }
-
-  private async parseCharacterData(text: string): Promise<void> {
-    const lines = text.trim().split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      try {
-        const entry = JSON.parse(lines[i]) as CharacterDictionaryData;
-        this.charData.set(entry.character, entry);
-      } catch {
-        // Skip invalid lines
-      }
-      if (i % 1000 === 999) await yieldToMain();
-    }
-  }
-
-  private async parseGraphicsData(text: string): Promise<void> {
-    const lines = text.trim().split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      try {
-        const entry = JSON.parse(lines[i]) as CharacterGraphics;
-        this.graphicsData.set(entry.character, entry);
-      } catch {
-        // Skip invalid lines
-      }
-      if (i % 1000 === 999) await yieldToMain();
     }
   }
 
   private async buildUnifiedEntries(): Promise<void> {
-    // Process HSK entries
     for (let i = 0; i < this.hskData.length; i++) {
       const hskEntry = this.hskData[i];
       const hanzi = hskEntry.source.hanzi;
       const id = hskEntry.entry_id;
-      const cedict = this.cedictEnrichment.get(hanzi);
-      
-      // Get character data for each character in the word
-      const charDataList = hanzi.split('').map(char => this.charData.get(char));
-      const mainChar = charDataList[0];
-      
-      // Parse pinyin tones
       const pinyinTones = this.extractTones(hskEntry.source.pinyin);
-      const altPinyin = cedict?.pinyin.filter((p) => p !== hskEntry.source.pinyin) || [];
-      const definitions = this.mergeDefinitions(hskEntry.core.english_definitions, cedict?.definitions || []);
-      const baseExamples: ExampleSentence[] = hskEntry.examples.map(ex => ({
-        chinese: ex.chinese,
-        pinyin: ex.pinyin,
-        english: ex.english,
-        source: 'OpenHSK',
-        difficulty: this.mapDifficulty(ex.difficulty_level),
-      }));
-      const externalExamples = this.tatoebaExamples.get(hanzi) || [];
-      const examples = this.mergeExamples(baseExamples, externalExamples);
-      
-      // Build character breakdown for multi-character words
-      const characterBreakdown = this.buildCharacterBreakdown(hanzi);
-      
-      // Build unified entry
+
       const unified: UnifiedEntry = {
         id,
         hanzi,
         traditional: hskEntry.source.traditional,
         pinyin: hskEntry.source.pinyin,
-        altPinyin: altPinyin.length > 0 ? altPinyin : undefined,
         pinyinTones,
-        definitions,
-        definitionSources: cedict ? ['hsk', 'cedict'] : ['hsk'],
-        qualityScore: cedict?.qualityScore ?? 0.6,
+        definitions: hskEntry.core.english_definitions,
         hskLevel: hskEntry.source.level,
         partOfSpeech: hskEntry.core.part_of_speech,
-        
-        // Character data - for single chars use direct data, for multi-char use aggregate
-        strokeCount: this.calculateStrokeCount(hanzi),
-        radical: hanzi.length === 1 ? mainChar?.radical : undefined,
-        decomposition: hanzi.length === 1 ? mainChar?.decomposition : undefined,
-        etymology: hanzi.length === 1 ? mainChar?.etymology : undefined,
-        
-        // Character breakdown for multi-character words
-        characterBreakdown: characterBreakdown && characterBreakdown.length > 0 ? characterBreakdown : undefined,
-        
-        // Examples
-        examples,
-        
-        // Related words
+        examples: hskEntry.examples.map(ex => ({
+          chinese: ex.chinese,
+          pinyin: ex.pinyin,
+          english: ex.english,
+          source: 'OpenHSK',
+          difficulty: this.mapDifficulty(ex.difficulty_level),
+        })),
         synonyms: hskEntry.related_vocabulary.synonyms.map(s => ({
-          hanzi: s.word,
-          pinyin: '', // Will be filled later
-          definition: s.note || ''
+          hanzi: s.word, pinyin: '', definition: s.note || ''
         })),
         antonyms: hskEntry.related_vocabulary.antonyms.map(a => ({
-          hanzi: a.word,
-          pinyin: '',
-          definition: a.note || ''
+          hanzi: a.word, pinyin: '', definition: a.note || ''
         })),
         collocations: hskEntry.usage_grammar?.collocations || [],
         wordFamily: hskEntry.related_vocabulary.word_family.map(w => ({
-          hanzi: w.word,
-          pinyin: '',
-          definition: w.note || ''
+          hanzi: w.word, pinyin: '', definition: w.note || ''
         })),
-        
-        // Learning aids
         mnemonic: hskEntry.learning_aids?.mnemonic,
         commonMistakes: hskEntry.usage_grammar?.common_mistakes?.map(m => m.mistake),
         usageNotes: hskEntry.usage_grammar?.register?.join(', '),
       };
-      
+
       this.entries.set(id, unified);
       if (i % 500 === 499) await yieldToMain();
     }
-    
-    // Enrich related words with pinyin from our data
+
     await this.enrichRelatedWords();
   }
 
-  private mergeDefinitions(primary: string[], secondary: string[]): string[] {
-    const dedup = new Map<string, string>();
-
-    for (const definition of [...primary, ...secondary]) {
-      const normalized = definition.replace(/\s+/g, ' ').trim();
-      if (!normalized) continue;
-
-      const key = normalized.toLowerCase();
-      if (!dedup.has(key)) {
-        dedup.set(key, normalized);
-      }
-    }
-
-    return Array.from(dedup.values()).slice(0, 12);
-  }
-
-  private mergeExamples(primary: ExampleSentence[], secondary: ExampleSentence[]): ExampleSentence[] {
-    const dedup = new Map<string, ExampleSentence>();
-
-    for (const example of [...primary, ...secondary]) {
-      const chinese = example.chinese?.trim();
-      const english = example.english?.trim();
-      if (!chinese || !english) continue;
-
-      const key = `${chinese}::${english}`.toLowerCase();
-      if (!dedup.has(key)) {
-        dedup.set(key, {
-          ...example,
-          chinese,
-          english,
-          pinyin: example.pinyin?.trim() || '',
-        });
-      }
-    }
-
-    return Array.from(dedup.values()).slice(0, 12);
-  }
-
-  private buildCharacterBreakdown(hanzi: string): NonNullable<UnifiedEntry['characterBreakdown']> {
-    if (hanzi.length <= 1) return [];
-    
-    const breakdown: NonNullable<UnifiedEntry['characterBreakdown']> = [];
-    
-    for (let i = 0; i < hanzi.length; i++) {
-      const char = hanzi[i];
-      const charData = this.charData.get(char);
-      
-      if (charData) {
-        breakdown.push({
-          char,
-          pinyin: charData.pinyin?.[0] || '',
-          definition: charData.definition,
-          strokeCount: charData.matches?.length || 0,
-          radical: charData.radical,
-          etymology: charData.etymology
-        });
-      }
-    }
-    
-    return breakdown;
-  }
-
-  private extractTones(pinyin: string): number[] {
-    const tones: number[] = [];
-    const toneMap: { [key: string]: number } = {
-      'ā': 1, 'ē': 1, 'ī': 1, 'ō': 1, 'ū': 1, 'ǖ': 1,
-      'á': 2, 'é': 2, 'í': 2, 'ó': 2, 'ú': 2, 'ǘ': 2,
-      'ǎ': 3, 'ě': 3, 'ǐ': 3, 'ǒ': 3, 'ǔ': 3, 'ǚ': 3,
-      'à': 4, 'è': 4, 'ì': 4, 'ò': 4, 'ù': 4, 'ǜ': 4,
-    };
-    
-    // Extract tone numbers from pinyin
-    const syllables = pinyin.split(' ');
-    for (const syllable of syllables) {
-      let tone = 0;
-      for (const char of syllable) {
-        if (toneMap[char]) {
-          tone = toneMap[char];
-          break;
-        }
-      }
-      // Check for number tone markers
-      const numMatch = syllable.match(/(\d)$/);
-      if (numMatch) {
-        tone = parseInt(numMatch[1]);
-      }
-      tones.push(tone);
-    }
-    
-    return tones;
-  }
-
-  private calculateStrokeCount(hanzi: string): number {
-    let count = 0;
-    for (const char of hanzi) {
-      const charData = this.charData.get(char);
-      if (charData?.matches) {
-        count += charData.matches.length;
-      }
-    }
-    return count || hanzi.length;
-  }
-
-  private mapDifficulty(level: number): 'beginner' | 'intermediate' | 'advanced' {
-    if (level <= 2) return 'beginner';
-    if (level <= 4) return 'intermediate';
-    return 'advanced';
-  }
-
   private async enrichRelatedWords(): Promise<void> {
-    // Create a lookup for all words
     const wordLookup = new Map<string, UnifiedEntry>();
     const entriesArray = Array.from(this.entries.values());
     for (let i = 0; i < entriesArray.length; i++) {
       wordLookup.set(entriesArray[i].hanzi, entriesArray[i]);
       if (i % 500 === 499) await yieldToMain();
     }
-    
-    // Enrich related words with pinyin and definitions
+
     for (let i = 0; i < entriesArray.length; i++) {
       const entry = entriesArray[i];
       for (const related of [...entry.synonyms, ...entry.antonyms, ...entry.wordFamily]) {
@@ -783,14 +174,13 @@ class UnifiedDictionaryService {
     const entriesArray = Array.from(this.entries.values());
     for (let i = 0; i < entriesArray.length; i++) {
       const entry = entriesArray[i];
-      // Hanzi index
+
       const existingHanzi = this.hanziIndex.get(entry.hanzi) || [];
       existingHanzi.push(entry.id);
       this.hanziIndex.set(entry.hanzi, existingHanzi);
-      
-      // Pinyin index (without tones)
+
       const pinyinNoTones = entry.pinyin.replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/g, (c) => {
-        const map: { [key: string]: string } = {
+        const map: Record<string, string> = {
           'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a',
           'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e',
           'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i',
@@ -800,12 +190,11 @@ class UnifiedDictionaryService {
         };
         return map[c] || c;
       }).replace(/\d/g, '').toLowerCase();
-      
+
       const existingPinyin = this.pinyinIndex.get(pinyinNoTones) || [];
       existingPinyin.push(entry.id);
       this.pinyinIndex.set(pinyinNoTones, existingPinyin);
-      
-      // Definition index
+
       for (const def of entry.definitions) {
         const words = def.toLowerCase().split(/\s+/);
         for (const word of words) {
@@ -819,32 +208,29 @@ class UnifiedDictionaryService {
           }
         }
       }
+
       if (i % 500 === 499) await yieldToMain();
     }
   }
 
-  // Search methods
   search(query: string, options: {
     hskLevel?: number | '7-9';
     partOfSpeech?: string;
     maxResults?: number;
   } = {}): SearchResult[] {
     if (!this.loaded) return [];
-    
+
     const { hskLevel, partOfSpeech, maxResults } = options;
     const normalizedQuery = query.toLowerCase().trim();
     const tonelessQuery = stripTones(normalizedQuery);
-    const shouldLimit = typeof maxResults === 'number' && Number.isFinite(maxResults);
+    const shouldLimit = typeof maxResults === 'number';
 
-    // Cache key includes query + all filters
     const cacheKey = `${normalizedQuery}::${hskLevel ?? 'all'}::${partOfSpeech ?? 'all'}::${maxResults ?? 'all'}`;
     const cached = this.searchCache.get(cacheKey);
     if (cached) return cached;
-    
-    // Get all entries first
+
     let allEntries = Array.from(this.entries.values());
-    
-    // Apply HSK filter first (for performance)
+
     if (hskLevel) {
       if (hskLevel === '7-9') {
         allEntries = allEntries.filter(e => e.hskLevel && e.hskLevel >= 7);
@@ -852,26 +238,22 @@ class UnifiedDictionaryService {
         allEntries = allEntries.filter(e => e.hskLevel === hskLevel);
       }
     }
-    
-    // Apply part of speech filter
+
     if (partOfSpeech && partOfSpeech !== 'all') {
       allEntries = allEntries.filter(e => e.partOfSpeech.includes(partOfSpeech));
     }
-    
-    // If no search query, return filtered results sorted by HSK level
+
     if (!normalizedQuery) {
       const sorted = allEntries
         .sort((a, b) => (a.hskLevel || 99) - (b.hskLevel || 99))
         .map(e => ({ entry: e, matchType: 'exact' as const, matchScore: 1 }));
-
       const result = shouldLimit ? sorted.slice(0, maxResults) : sorted;
       this.setSearchCache(cacheKey, result);
       return result;
     }
-    
+
     const results = new Map<string, SearchResult>();
-    
-    // 1. Exact hanzi match (highest priority)
+
     const exactHanzi = this.hanziIndex.get(query);
     if (exactHanzi) {
       for (const id of exactHanzi) {
@@ -881,8 +263,7 @@ class UnifiedDictionaryService {
         }
       }
     }
-    
-    // 2. Pinyin match (toneless exact)
+
     const pinyinMatches = this.pinyinIndex.get(tonelessQuery);
     if (pinyinMatches) {
       for (const id of pinyinMatches) {
@@ -895,7 +276,6 @@ class UnifiedDictionaryService {
       }
     }
 
-    // 2b. Partial pinyin prefix match (toneless)
     if (tonelessQuery.length >= 2 && !results.has(tonelessQuery)) {
       for (const entry of allEntries) {
         if (!results.has(entry.id)) {
@@ -906,8 +286,7 @@ class UnifiedDictionaryService {
         }
       }
     }
-    
-    // 3. Definition match
+
     const defMatches = this.definitionIndex.get(normalizedQuery);
     if (defMatches) {
       for (const id of defMatches) {
@@ -919,15 +298,13 @@ class UnifiedDictionaryService {
         }
       }
     }
-    
-    // 4. Fuzzy hanzi match (contains query)
+
     for (const entry of allEntries) {
       if (!results.has(entry.id) && entry.hanzi.includes(normalizedQuery) && entry.hanzi !== normalizedQuery) {
         results.set(entry.id, { entry, matchType: 'fuzzy', matchScore: 40 });
       }
     }
-    
-    // Sort by score and return
+
     const sortedResults = Array.from(results.values())
       .sort((a, b) => b.matchScore - a.matchScore);
 
@@ -939,9 +316,7 @@ class UnifiedDictionaryService {
   private setSearchCache(key: string, results: SearchResult[]): void {
     if (this.searchCache.size >= this.SEARCH_CACHE_MAX_SIZE) {
       const firstKey = this.searchCache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.searchCache.delete(firstKey);
-      }
+      if (firstKey !== undefined) this.searchCache.delete(firstKey);
     }
     this.searchCache.set(key, results);
   }
@@ -950,26 +325,20 @@ class UnifiedDictionaryService {
     return list.some(e => e.id === entry.id);
   }
 
-  // Get entry by ID
   getEntry(id: string): UnifiedEntry | undefined {
     return this.entries.get(id);
   }
 
-  // Get entry by hanzi
   getEntryByHanzi(hanzi: string): UnifiedEntry | undefined {
     const ids = this.hanziIndex.get(hanzi);
-    if (ids && ids.length > 0) {
-      return this.entries.get(ids[0]);
-    }
+    if (ids && ids.length > 0) return this.entries.get(ids[0]);
     return undefined;
   }
 
-  // Get all entries
   getAllEntries(): UnifiedEntry[] {
     return Array.from(this.entries.values());
   }
 
-  // Get entries by HSK level
   getByHSKLevel(level: number | '7-9'): UnifiedEntry[] {
     let entries: UnifiedEntry[];
     if (level === '7-9') {
@@ -977,11 +346,9 @@ class UnifiedDictionaryService {
     } else {
       entries = Array.from(this.entries.values()).filter(e => e.hskLevel === level);
     }
-    // Sort by frequency or HSK sub-level
     return entries.sort((a, b) => (a.hskLevel || 99) - (b.hskLevel || 99));
   }
 
-  // Get related entries
   getRelatedEntries(hanzi: string): UnifiedEntry[] {
     const entry = this.getEntryByHanzi(hanzi);
     if (!entry) return [];
@@ -991,154 +358,53 @@ class UnifiedDictionaryService {
 
     const addCandidate = (candidate: UnifiedEntry | undefined, baseScore: number): void => {
       if (!candidate || candidate.id === entry.id) return;
-
       const candidateChars = new Set(candidate.hanzi.split(''));
       let sharedChars = 0;
       for (const char of candidateChars) {
-        if (baseCharSet.has(char)) {
-          sharedChars += 1;
-        }
+        if (baseCharSet.has(char)) sharedChars += 1;
       }
-
       let score = baseScore + sharedChars * 12;
-
-      if (entry.hskLevel && candidate.hskLevel && entry.hskLevel === candidate.hskLevel) {
-        score += 15;
-      }
-
-      if (
-        entry.partOfSpeech.length > 0 &&
-        candidate.partOfSpeech.length > 0 &&
-        entry.partOfSpeech.some((pos) => candidate.partOfSpeech.includes(pos))
-      ) {
-        score += 8;
-      }
-
+      if (entry.hskLevel && candidate.hskLevel && entry.hskLevel === candidate.hskLevel) score += 15;
+      if (entry.partOfSpeech.length > 0 && candidate.partOfSpeech.length > 0 &&
+          entry.partOfSpeech.some(pos => candidate.partOfSpeech.includes(pos))) score += 8;
       const existing = scored.get(candidate.id);
-      if (!existing || score > existing.score) {
-        scored.set(candidate.id, { entry: candidate, score });
-      }
+      if (!existing || score > existing.score) scored.set(candidate.id, { entry: candidate, score });
     };
 
-    // Add explicit semantic relations first.
-    for (const syn of entry.synonyms) {
-      addCandidate(this.getEntryByHanzi(syn.hanzi), 120);
-    }
+    for (const syn of entry.synonyms) addCandidate(this.getEntryByHanzi(syn.hanzi), 120);
+    for (const ant of entry.antonyms) addCandidate(this.getEntryByHanzi(ant.hanzi), 110);
+    for (const word of entry.wordFamily) addCandidate(this.getEntryByHanzi(word.hanzi), 95);
 
-    for (const ant of entry.antonyms) {
-      addCandidate(this.getEntryByHanzi(ant.hanzi), 110);
-    }
-
-    for (const word of entry.wordFamily) {
-      addCandidate(this.getEntryByHanzi(word.hanzi), 95);
-    }
-
-    // Add entries with shared characters.
     for (const char of baseCharSet) {
       const ids = this.hanziIndex.get(char);
       if (!ids) continue;
-
-      for (const id of ids) {
-        const found = this.entries.get(id);
-        addCandidate(found, 60);
-      }
+      for (const id of ids) addCandidate(this.entries.get(id), 60);
     }
 
     return Array.from(scored.values())
       .sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
-        if ((a.entry.hskLevel || 99) !== (b.entry.hskLevel || 99)) {
-          return (a.entry.hskLevel || 99) - (b.entry.hskLevel || 99);
-        }
-        return a.entry.hanzi.localeCompare(b.entry.hanzi, 'zh-Hans-CN');
+        return (a.entry.hskLevel || 99) - (b.entry.hskLevel || 99);
       })
       .slice(0, 24)
-      .map((item) => item.entry);
+      .map(item => item.entry);
   }
 
-  // Get character decomposition
-  getCharacterDecomposition(char: string): {
-    character: string;
-    definition?: string;
-    pinyin: string[];
-    decomposition: string;
-    etymology?: UnifiedEntry['etymology'];
-    radical: string;
-    strokeCount: number;
-  } | null {
-    const charData = this.charData.get(char);
-    if (!charData) return null;
-    
-    return {
-      character: charData.character,
-      definition: charData.definition,
-      pinyin: charData.pinyin || [],
-      decomposition: charData.decomposition,
-      etymology: charData.etymology,
-      radical: charData.radical,
-      strokeCount: charData.matches?.length || 0
-    };
-  }
-
-  // Get stroke data for a character
-  getStrokeData(char: string): CharacterGraphics | null {
-    return this.graphicsData.get(char) || null;
-  }
-
-  // Get stroke data for all characters in a word
-  getWordStrokeData(hanzi: string): { char: string; strokes: string[]; medians: number[][][] }[] {
-    const result: { char: string; strokes: string[]; medians: number[][][] }[] = [];
-    
-    for (const char of hanzi) {
-      const graphics = this.graphicsData.get(char);
-      if (graphics) {
-        result.push({
-          char: graphics.character,
-          strokes: graphics.strokes,
-          medians: graphics.medians
-        });
-      }
-    }
-    
-    return result;
-  }
-
-  // Check if character has stroke data
-  hasStrokeData(char: string): boolean {
-    return this.graphicsData.has(char);
-  }
-
-  // Get HSK statistics - group 7-9 together
   getHSKStats(): { level: number | '7-9'; label: string; count: number }[] {
-    const stats: { [level: string]: number } = {};
-    
+    const stats: Record<string, number> = {};
     for (const entry of this.entries.values()) {
       const level = entry.hskLevel || 0;
-      if (level >= 7) {
-        stats['7-9'] = (stats['7-9'] || 0) + 1;
-      } else if (level > 0) {
-        stats[level] = (stats[level] || 0) + 1;
-      }
+      if (level >= 7) stats['7-9'] = (stats['7-9'] || 0) + 1;
+      else if (level > 0) stats[level] = (stats[level] || 0) + 1;
     }
-    
     const result: { level: number | '7-9'; label: string; count: number }[] = [];
-    
-    // Add levels 1-6
     for (let i = 1; i <= 6; i++) {
-      if (stats[i]) {
-        result.push({ level: i, label: `HSK ${i}`, count: stats[i] });
-      }
+      if (stats[i]) result.push({ level: i, label: `HSK ${i}`, count: stats[i] });
     }
-    
-    // Add 7-9 group
-    if (stats['7-9']) {
-      result.push({ level: '7-9', label: 'HSK 7-9', count: stats['7-9'] });
-    }
-    
+    if (stats['7-9']) result.push({ level: '7-9', label: 'HSK 7-9', count: stats['7-9'] });
     return result;
   }
 
-  // Get random entries
   getRandomEntries(count: number, hskLevel?: number | '7-9'): UnifiedEntry[] {
     let entries = Array.from(this.entries.values());
     if (hskLevel !== undefined) {
@@ -1151,98 +417,51 @@ class UnifiedDictionaryService {
     return entries.sort(() => Math.random() - 0.5).slice(0, count);
   }
 
-  // Get total count
   getCount(): number {
     return this.entries.size;
   }
 
-  // Check if loaded
   isLoaded(): boolean {
     return this.loaded;
   }
 
-  // --- Hanzi API (replaces makemeahanziService) ---
-
-  getHanziCharacter(char: string): HanziCharacter | undefined {
-    const data = this.charData.get(char);
-    if (!data) return undefined;
-    return data as unknown as HanziCharacter;
-  }
-
-  getHanziGraphics(char: string): HanziGraphics | undefined {
-    return this.graphicsData.get(char) as unknown as HanziGraphics | undefined;
-  }
-
-  getHanziDecomposition(char: string): {
-    structure: string;
-    components: { char: string; name?: string; meaning?: string }[];
-    etymology?: HanziCharacter['etymology'];
-  } | null {
-    const entry = this.charData.get(char);
-    if (!entry) return null;
-
-    const components: { char: string; name?: string; meaning?: string }[] = [];
-    const componentChars = entry.decomposition.replace(/[⿰⿱⿲⿳⿴⿵⿶⿷⿸⿹⿺⿻？]/g, '').split('');
-    for (const compChar of componentChars) {
-      const compEntry = this.charData.get(compChar);
-      components.push({
-        char: compChar,
-        name: compEntry?.radical,
-        meaning: compEntry?.definition
-      });
-    }
-
-    return {
-      structure: entry.decomposition,
-      components,
-      etymology: entry.etymology
+  private extractTones(pinyin: string): number[] {
+    const tones: number[] = [];
+    const toneMap: Record<string, number> = {
+      'ā': 1, 'ē': 1, 'ī': 1, 'ō': 1, 'ū': 1, 'ǖ': 1,
+      'á': 2, 'é': 2, 'í': 2, 'ó': 2, 'ú': 2, 'ǘ': 2,
+      'ǎ': 3, 'ě': 3, 'ǐ': 3, 'ǒ': 3, 'ǔ': 3, 'ǚ': 3,
+      'à': 4, 'è': 4, 'ì': 4, 'ò': 4, 'ù': 4, 'ǜ': 4,
     };
-  }
-
-  getHanziRadical(char: string): { radical: string; meaning?: string } | null {
-    const entry = this.charData.get(char);
-    if (!entry) return null;
-    const radicalEntry = this.charData.get(entry.radical);
-    return {
-      radical: entry.radical,
-      meaning: radicalEntry?.definition
-    };
-  }
-
-  searchHanziByDefinition(query: string): HanziCharacter[] {
-    const results: HanziCharacter[] = [];
-    const lowerQuery = query.toLowerCase();
-    for (const entry of this.charData.values()) {
-      if (entry.definition?.toLowerCase().includes(lowerQuery)) {
-        results.push(entry as unknown as HanziCharacter);
+    const syllables = pinyin.split(' ');
+    for (const syllable of syllables) {
+      let tone = 0;
+      for (const char of syllable) {
+        if (toneMap[char]) { tone = toneMap[char]; break; }
       }
+      const numMatch = syllable.match(/(\d)$/);
+      if (numMatch) tone = parseInt(numMatch[1]);
+      tones.push(tone);
     }
-    return results.slice(0, 20);
+    return tones;
   }
 
-  getHanziByRadical(radical: string): HanziCharacter[] {
-    const results: HanziCharacter[] = [];
-    for (const entry of this.charData.values()) {
-      if (entry.radical === radical) {
-        results.push(entry as unknown as HanziCharacter);
-      }
-    }
-    return results.slice(0, 50);
+  private mapDifficulty(level: number): 'beginner' | 'intermediate' | 'advanced' {
+    if (level <= 2) return 'beginner';
+    if (level <= 4) return 'intermediate';
+    return 'advanced';
   }
 
-  getAllHanziRadicals(): { char: string; definition?: string; count: number }[] {
-    const radicalCounts = new Map<string, number>();
-    for (const entry of this.charData.values()) {
-      const count = radicalCounts.get(entry.radical) || 0;
-      radicalCounts.set(entry.radical, count + 1);
-    }
-    return Array.from(radicalCounts.entries())
-      .map(([char, count]) => ({
-        char,
-        definition: this.charData.get(char)?.definition,
-        count
-      }))
-      .sort((a, b) => b.count - a.count);
+  getHanziCharacter(): undefined {
+    return undefined;
+  }
+
+  getHanziGraphics(): undefined {
+    return undefined;
+  }
+
+  hasStrokeData(): boolean {
+    return false;
   }
 }
 

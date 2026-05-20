@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
   BookOpen,
   Volume2,
@@ -213,11 +213,7 @@ export const StoryViewer = ({
       </div>
 
       {/* Story Card */}
-      <motion.div
-        key={story.story_id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <div>
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between">
@@ -296,17 +292,12 @@ export const StoryViewer = ({
                         ref={(el) => { sentenceRefs.current[i] = el; }}
                         className="group"
                       >
-                        <motion.div
-                          animate={{
-                            backgroundColor: isCurrent
-                              ? 'hsl(var(--primary) / 0.12)'
-                              : 'transparent',
-                            borderLeftColor: isCurrent
-                              ? 'hsl(var(--primary))'
-                              : 'transparent',
+                        <div
+                          style={{
+                            backgroundColor: isCurrent ? 'hsl(var(--primary) / 0.12)' : 'transparent',
+                            borderLeftColor: isCurrent ? 'hsl(var(--primary))' : 'transparent',
                           }}
-                          transition={{ duration: 0.25 }}
-                          className="flex items-start gap-3 rounded-lg px-3 py-2 border-l-4 border-l-transparent cursor-pointer"
+                          className="flex items-start gap-3 rounded-lg px-3 py-2 border-l-4 border-l-transparent cursor-pointer transition-colors duration-200"
                           onClick={() => {
                             if (isCurrent) return;
                             handlePlayFromIndex(i);
@@ -340,27 +331,17 @@ export const StoryViewer = ({
                             )}
                           </div>
                           <div className="shrink-0 flex items-center gap-1">
-                            {isCurrent && isPlaying && !isPaused && (
-                              <motion.div
-                                className="flex items-center gap-0.5 mr-1"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                              >
-                                {[0, 1, 2].map((j) => (
-                                  <motion.span
-                                    key={j}
-                                    className="w-1 h-4 bg-primary rounded-full"
-                                    animate={{ scaleY: [0.4, 1, 0.4] }}
-                                    transition={{
-                                      duration: 0.8,
-                                      repeat: Infinity,
-                                      delay: j * 0.15,
-                                      ease: 'easeInOut',
-                                    }}
-                                  />
-                                ))}
-                              </motion.div>
-                            )}
+                              {isCurrent && isPlaying && !isPaused && (
+                                <div className="flex items-center gap-0.5 mr-1">
+                                  {[0, 1, 2].map((j) => (
+                                    <span
+                                      key={j}
+                                      className="w-1 h-4 bg-primary rounded-full animate-pulse"
+                                      style={{ animationDelay: `${j * 0.15}s` }}
+                                    />
+                                  ))}
+                                </div>
+                              )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -375,7 +356,7 @@ export const StoryViewer = ({
                               <Volume2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        </motion.div>
+                          </div>
                       </div>
                     );
                   })}
@@ -429,14 +410,7 @@ export const StoryViewer = ({
                 {showVocabList ? 'Hide Vocabulary' : `Show Vocabulary (${story.word_usage?.length || 0} words)`}
               </Button>
 
-              <AnimatePresence>
-                {showVocabList && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
+              {showVocabList && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
                       {(story.word_usage || []).map((usage, i) => (
                         <div
@@ -459,13 +433,11 @@ export const StoryViewer = ({
                         </div>
                       ))}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              )}
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 };

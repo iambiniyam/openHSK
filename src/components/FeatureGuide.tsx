@@ -1,16 +1,11 @@
 import { memo } from 'react';
 import {
-  Brain,
-  Gamepad2,
   Timer,
   BookOpen,
   Search,
-  GitBranch,
-  Layers,
   Volume2,
   ScrollText,
   Library,
-  BarChart3,
   LayoutDashboard,
   X,
 } from 'lucide-react';
@@ -31,7 +26,7 @@ interface FeatureGuideProps {
 }
 
 interface FeatureItem {
-  icon: typeof Brain;
+  icon: typeof Search;
   title: string;
   description: string;
   view: ViewMode;
@@ -44,29 +39,6 @@ interface FeatureCategory {
 
 const categories: FeatureCategory[] = [
   {
-    label: 'Study',
-    items: [
-      {
-        icon: Brain,
-        title: 'Study Session',
-        description: 'Review due words or learn new ones with spaced repetition (SRS).',
-        view: 'study',
-      },
-      {
-        icon: Gamepad2,
-        title: 'Quiz Mode',
-        description: 'Test your knowledge with 4 question types and keyboard shortcuts.',
-        view: 'study',
-      },
-      {
-        icon: Timer,
-        title: 'Focus Timer',
-        description: 'Pomodoro timer to stay focused during study sessions.',
-        view: 'dashboard',
-      },
-    ],
-  },
-  {
     label: 'Explore',
     items: [
       {
@@ -76,16 +48,10 @@ const categories: FeatureCategory[] = [
         view: 'browse',
       },
       {
-        icon: Layers,
-        title: 'Character Graphs',
-        description: 'Explore connections between characters with interactive D3 graphs.',
+        icon: BookOpen,
+        title: 'Detail View',
+        description: 'Deep-dive into each HSK word with examples and related terms.',
         view: 'detail',
-      },
-      {
-        icon: GitBranch,
-        title: 'Grammar Map',
-        description: 'Interactive dependency graph of 28 grammar points across HSK levels.',
-        view: 'progress',
       },
     ],
   },
@@ -113,19 +79,19 @@ const categories: FeatureCategory[] = [
     ],
   },
   {
-    label: 'Track',
+    label: 'Tools',
     items: [
       {
         icon: LayoutDashboard,
         title: 'Dashboard',
-        description: 'Your personal learning hub with stats, goals, and quick actions.',
+        description: 'Your personal learning hub with stats, review tracking, and quick actions.',
         view: 'dashboard',
       },
       {
-        icon: BarChart3,
-        title: 'Progress',
-        description: 'Track streaks, review schedules, favorites, and export data.',
-        view: 'progress',
+        icon: Timer,
+        title: 'Focus Timer',
+        description: 'Pomodoro timer to stay focused during study sessions.',
+        view: 'dashboard',
       },
     ],
   },
