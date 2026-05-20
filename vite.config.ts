@@ -38,7 +38,7 @@ export default defineConfig(() => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,json,txt,woff2}'],
-        globIgnores: ['**/hsk3.0*.json', '**/dictionary.txt', '**/graphics*.txt', '**/quality/*.json', '**/cedict.txt.gz'],
+        globIgnores: ['**/hsk3.0*.json', '**/quality/*.json'],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
         runtimeCaching: [
