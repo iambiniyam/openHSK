@@ -18,6 +18,8 @@
     "data:prepare:stories:test": "node scripts/data/build-story-dataset.mjs test",
     "data:prepare:books": "node scripts/data/build-book-dataset.mjs",
     "data:prepare:books:test": "node scripts/data/build-book-dataset.mjs test",
+    "data:prepare:book": "node scripts/data/build-hsk-book.mjs",
+    "data:prepare:book:all": "node scripts/data/build-hsk-book.mjs",
     "deploy:pages": "wrangler pages deploy dist --project-name openhsk",
     "deploy:pages:prod": "wrangler pages deploy dist --project-name openhsk --branch main"
   },
