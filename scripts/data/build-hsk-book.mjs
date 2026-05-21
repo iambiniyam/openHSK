@@ -2,15 +2,21 @@
  * build-hsk-book.mjs — Generate beautiful, interactive HSK learning books
  *
  * Usage:
- *   node scripts/data/build-hsk-book.mjs                # Generate all levels (1-7)
- *   node scripts/data/build-hsk-book.mjs --level=1       # Level 1 only
- *   node scripts/data/build-hsk-book.mjs --levels=1,2,3  # Levels 1, 2, 3
- *   node scripts/data/build-hsk-book.mjs --format=html   # HTML with TTS (default)
+ *   node scripts/data/build-hsk-book.mjs                          # Generate all levels HTML
+ *   node scripts/data/build-hsk-book.mjs --level=1                 # Level 1 only
+ *   node scripts/data/build-hsk-book.mjs --levels=1,2,3            # Levels 1, 2, 3
+ *   node scripts/data/build-hsk-book.mjs --pdf                     # HTML + PDF for all levels
+ *   node scripts/data/build-hsk-book.mjs --pdf --level=1           # Level 1 HTML + PDF
+ *   node scripts/data/build-hsk-book.mjs --format=pdf              # PDF only (no HTML)
+ *   node scripts/data/build-hsk-book.mjs --format=html --pdf       # HTML + PDF
  *
- * Output: out/hsk-level-{N}.html (per level)
+ * Output: out/hsk-level-{N}.html, out/hsk-level-{N}.pdf (per level)
+ *
+ * PDF generation uses puppeteer-core with Microsoft Edge Chromium.
+ * Install: npm install puppeteer-core --save-dev
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -114,7 +120,7 @@ function generateToneHtml(pinyin) {
   return html;
 }
 
-function generateEntryHTML(entry, index) {
+function generateEntryHTML(entry, index, compact) {
   const { source, core, examples, related_vocabulary, usage_grammar, character_insights, learning_aids } = entry;
   const level = source.level;
   const color = HSK_LEVEL_COLORS[level]?.hex || '#666';
@@ -246,7 +252,7 @@ function generateEntryHTML(entry, index) {
         </div>
         <div class="meta-row">
           ${posBadges}
-          <span class="level-badge" style="background:${color}22; color:${color}; border-color:${color}44;">HSK ${source.level}${source.level >= 7 ? ' (9)' : ''}</span>
+          <span class="level-badge" style="background:${color}22; color:${color}; border-color:${color}44;">HSK ${source.level >= 7 ? '7-9' : source.level}</span>
         </div>
         <ul class="definitions">${defs}</ul>
       </div>
@@ -787,13 +793,103 @@ function generateCSS() {
     .cover-stats { gap: 24px; }
   }
 
-  /* ── Print ── */
+  /* ── Print / Compact PDF ── */
   @media print {
+    :root {
+      --font-size-hanzi: 1.6rem;
+      --font-size-pinyin: 0.8rem;
+      --font-size-def: 0.75rem;
+      --font-size-body: 0.7rem;
+      --font-size-small: 0.6rem;
+      --entry-padding: 10px 14px;
+      --section-gap: 4px;
+      --line-height-tight: 1.3;
+    }
+
     .nav-bar, .dark-toggle, .audio-btn, .audio-btn-sm { display: none !important; }
-    .word-entry { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
-    body { background: white; color: black; }
-    .word-entry::before { background: var(--accent) !important; }
-    .book-cover { min-height: auto; padding: 60px 24px; }
+    body { background: white; color: black; font-size: var(--font-size-body); }
+
+    .book-cover { min-height: auto; padding: 30px 24px; page-break-after: always; }
+    .cover-title { font-size: 2rem !important; }
+    .cover-subtitle { font-size: 1rem !important; }
+    .cover-stats { gap: 20px !important; }
+    .cover-stat-value { font-size: 1.2rem !important; }
+
+    .toc { padding: 20px 0 !important; page-break-after: always; }
+    .toc-grid { grid-template-columns: repeat(3, 1fr) !important; }
+    .toc-item { padding: 4px 8px !important; font-size: 0.65rem !important; }
+
+    .pos-header { display: none !important; }
+    .pos-section { margin-bottom: 0 !important; }
+
+    .word-entry {
+      page-break-before: always;
+      page-break-inside: auto;
+      box-shadow: none;
+      border: none;
+      border-top: 1px solid #ddd;
+      padding: var(--entry-padding);
+      margin: 0;
+      border-radius: 0;
+    }
+    .word-entry:first-of-type { page-break-before: auto; }
+    .word-entry::before { content: none; }
+
+    .hanzi { font-size: var(--font-size-hanzi) !important; }
+    .traditional { font-size: 1rem !important; }
+    .pinyin { font-size: var(--font-size-pinyin) !important; }
+    .definitions li { font-size: var(--font-size-def) !important; padding: 1px 6px !important; }
+    .pos-badge { font-size: 0.55rem !important; padding: 0 5px !important; }
+    .level-badge { font-size: 0.55rem !important; padding: 0 5px !important; }
+
+    .entry-header { margin-bottom: 6px !important; }
+    .entry-body { margin-bottom: 0 !important; }
+
+    .section {
+      margin-top: var(--section-gap) !important;
+      padding-top: var(--section-gap) !important;
+      border-top: 1px dotted #ddd !important;
+    }
+    .section h3 {
+      font-size: var(--font-size-small) !important;
+      margin-bottom: 2px !important;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .section p, .section li, .ex-english {
+      font-size: var(--font-size-body) !important;
+      line-height: var(--line-height-tight) !important;
+    }
+
+    .example {
+      padding: 3px 8px !important;
+      margin-bottom: 3px !important;
+      border-left-width: 2px !important;
+    }
+    .example .difficulty { display: none; }
+    .ex-chinese { font-size: 0.8rem !important; }
+    .ex-pinyin { font-size: 0.7rem !important; }
+
+    .mnemonic p { padding: 3px 8px !important; font-size: var(--font-size-body) !important; }
+    .breakdown p { margin-bottom: 1px !important; }
+
+    .mistake { padding: 4px 8px !important; }
+    .collocation-chip { padding: 1px 6px !important; margin: 1px !important; font-size: 0.65rem !important; }
+    .related-word { padding: 2px 8px !important; margin: 1px !important; }
+    .rw-hanzi { font-size: 0.8rem !important; }
+    .rw-note { font-size: 0.6rem !important; }
+
+    .entry-footer { display: none !important; }
+    .book-container { max-width: 100% !important; padding: 0 !important; }
+
+    /* Condense examples into single compact block */
+    .examples .example { display: inline-block; width: 100%; }
+    .ex-chinese, .ex-pinyin, .ex-english { display: inline; margin-right: 4px; }
+    .ex-chinese::after { content: " · "; }
+    .ex-pinyin::after { content: " · "; }
+
+    /* Related words horizontal */
+    .related .related-word { display: inline-flex; }
   }
   `;
 }
@@ -801,7 +897,7 @@ function generateCSS() {
 function generateNavBar(level, color) {
   const levels = [1,2,3,4,5,6,7];
   const levelLinks = levels.map(l =>
-    `<a href="hsk-level-${l}.html" class="nav-btn" style="${l === level ? `background:${HSK_LEVEL_COLORS[l].hex};color:white;border-color:${HSK_LEVEL_COLORS[l].hex}` : ''}">HSK ${l}</a>`
+    `<a href="hsk-level-${l}.html" class="nav-btn" style="${l === level ? `background:${HSK_LEVEL_COLORS[l].hex};color:white;border-color:${HSK_LEVEL_COLORS[l].hex}` : ''}">HSK ${l >= 7 ? '7-9' : l}</a>`
   ).join('');
 
   return `
@@ -816,7 +912,32 @@ function generateNavBar(level, color) {
   </nav>`;
 }
 
-function generateBookHTML(entries, level) {
+function splitIntoSubBooks(entries, level) {
+  const posGroups = groupByPOS(entries);
+  const sortedPOS = Object.keys(posGroups).sort((a, b) => posScore(a) - posScore(b));
+
+  // Merge small POS categories into "Other"
+  const MIN_SIZE = 50;
+  const books = [];
+  let otherEntries = [];
+
+  for (const pos of sortedPOS) {
+    if (posGroups[pos].length >= MIN_SIZE) {
+      const label = POS_LABELS[pos] || pos;
+      books.push({ suffix: `-${pos.replace(/\s+/g, '-')}`, label: `HSK 7-9 ${label}`, entries: posGroups[pos] });
+    } else {
+      otherEntries.push(...posGroups[pos]);
+    }
+  }
+
+  if (otherEntries.length > 0) {
+    books.push({ suffix: '-other', label: 'HSK 7-9 Other', entries: otherEntries });
+  }
+
+  return books;
+}
+
+function generateBookHTML(entries, level, subtitle) {
   const color = HSK_LEVEL_COLORS[level];
   const count = entries.length;
 
@@ -845,14 +966,16 @@ function generateBookHTML(entries, level) {
       </section>`;
   }).join('\n');
 
+  const levelLabel = level >= 7 ? '7-9' : String(level);
   const hskLabels = { 1: 'Foundation', 2: 'Building Blocks', 3: 'Growing', 4: 'Expanding', 5: 'Advancing', 6: 'Proficiency', 7: 'Mastery' };
+  const displayTitle = subtitle || `HSK ${levelLabel} — ${hskLabels[level]}`;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HSK ${level} — ${hskLabels[level]} — OpenHSK Complete Learning Guide</title>
+<title>${displayTitle} — OpenHSK</title>
 <style>${generateCSS()}</style>
 </head>
 <body>
@@ -891,7 +1014,7 @@ function toggleDarkMode() {
 
   <!-- Cover Page -->
   <section class="book-cover">
-    <span class="cover-badge" style="background:${color.hex}">HSK Level ${level}</span>
+    <span class="cover-badge" style="background:${color.hex}">${subtitle || `HSK ${levelLabel}`}</span>
     <h1 class="cover-title">${hskLabels[level]}</h1>
     <p class="cover-subtitle">${count} Essential Words · Full Examples · Mnemonics · Audio</p>
     <div class="cover-stats">
@@ -921,7 +1044,7 @@ function toggleDarkMode() {
 
   <!-- Footer -->
   <footer style="text-align:center;padding:40px 0;color:var(--text-tertiary);font-size:0.875rem;border-top:1px solid var(--border);margin-top:48px">
-    <p>Generated from <a href="https://github.com/iambiniyam/openHSK" style="color:${color.hex}">OpenHSK</a> · ${count} words · HSK ${level} ${hskLabels[level]}</p>
+    <p>Generated from <a href="https://github.com/iambiniyam/openHSK" style="color:${color.hex}">OpenHSK</a> · ${count} words · ${displayTitle}</p>
     <p style="margin-top:4px">Click 🔊 to hear pronunciation · 🌓 for dark mode</p>
   </footer>
 </div>
@@ -932,15 +1055,86 @@ function toggleDarkMode() {
 </html>`;
 }
 
+// ── PDF Generation ──
+async function generatePDF(htmlPath, pdfPath) {
+  let puppeteer;
+  try {
+    puppeteer = await import('puppeteer-core');
+  } catch {
+    console.warn('  ⚠ puppeteer-core not installed. Install with: npm install puppeteer-core --save-dev');
+    return false;
+  }
+
+  // Find Edge/Chrome executable
+  const edgePaths = [
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  ];
+  const { existsSync } = await import('fs');
+  let executablePath = edgePaths.find(p => existsSync(p));
+  if (!executablePath) {
+    console.warn('  ⚠ Edge/Chrome not found. Install Microsoft Edge or Google Chrome for PDF output.');
+    return false;
+  }
+
+  try {
+    const browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      protocolTimeout: 600000,
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1200, height: 800 });
+    await page.setDefaultTimeout(600000);
+
+    // Load from file URL
+    const fileUrl = 'file://' + htmlPath.replace(/\\/g, '/');
+    await page.goto(fileUrl, { waitUntil: 'load', timeout: 300000 });
+
+    // Wait for fonts to render
+    await page.evaluate(() => document.fonts.ready).catch(() => {});
+
+    await page.pdf({
+      path: pdfPath,
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' },
+      displayHeaderFooter: true,
+      headerTemplate: '<div style="font-size:8px;color:#999;padding:0 20mm;width:100%;text-align:center"></div>',
+      footerTemplate: '<div style="font-size:8px;color:#999;padding:0 20mm;width:100%;text-align:center"><span class="pageNumber"></span></div>',
+      preferCSSPageSize: true,
+    });
+
+    await browser.close();
+    return true;
+  } catch (err) {
+    console.warn(`  ⚠ PDF generation failed: ${err.message}`);
+    return false;
+  }
+}
+
 // ── CLI ──
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { levels: [1,2,3,4,5,6,7] };
+  const opts = {
+    levels: [1,2,3,4,5,6,7],
+    format: 'html',
+    pdf: false,
+  };
   for (const arg of args) {
     if (arg.startsWith('--level=')) {
       opts.levels = [parseInt(arg.split('=')[1])];
     } else if (arg.startsWith('--levels=')) {
       opts.levels = arg.split('=')[1].split(',').map(Number);
+    } else if (arg === '--pdf') {
+      opts.pdf = true;
+      opts.format = 'html'; // HTML + PDF
+    } else if (arg.startsWith('--format=')) {
+      opts.format = arg.split('=')[1];
+      if (opts.format === 'pdf') opts.pdf = true;
     }
   }
   return opts;
@@ -959,17 +1153,44 @@ async function main() {
       console.warn(`⚠ No entries for HSK level ${level}`);
       continue;
     }
-    console.log(`📖 Generating HSK ${level} book (${entries.length} words)...`);
-    const html = generateBookHTML(entries, level);
-    const outPath = join(OUT_DIR, `hsk-level-${level}.html`);
-    writeFileSync(outPath, html, 'utf-8');
-    console.log(`  ✓ Written to ${outPath}`);
+    const levelLabel = level >= 7 ? '7-9' : String(level);
+
+    // For level 7, split by POS to keep books manageable
+    const isLevel7 = level >= 7;
+    const subBooks = isLevel7 ? splitIntoSubBooks(entries, level) : [{ suffix: '', label: `HSK ${levelLabel}`, entries }];
+
+    for (const sub of subBooks) {
+      const suffix = sub.suffix;
+      const label = sub.label;
+      const subEntries = sub.entries;
+      const fileName = `hsk-level-${level}${suffix}`;
+
+      console.log(`📖 Generating ${label} (${subEntries.length} words)...`);
+      const html = generateBookHTML(subEntries, level, label);
+      const htmlPath = join(OUT_DIR, `${fileName}.html`);
+
+      if (opts.format !== 'pdf') {
+        writeFileSync(htmlPath, html, 'utf-8');
+        console.log(`  ✓ ${htmlPath}`);
+      }
+
+      if (opts.pdf) {
+        writeFileSync(htmlPath, html, 'utf-8');
+        const pdfPath = join(OUT_DIR, `${fileName}.pdf`);
+        console.log(`  📄 Generating PDF...`);
+        const ok = await generatePDF(htmlPath, pdfPath);
+        if (ok) console.log(`  ✓ ${pdfPath}`);
+        if (opts.format === 'pdf') try { rmSync(htmlPath); } catch {}
+      }
+    }
   }
 
-  // Generate index page
-  const indexHtml = generateIndexHTML(opts.levels, byLevel);
-  writeFileSync(join(OUT_DIR, 'index.html'), indexHtml, 'utf-8');
-  console.log(`📚 Index: ${join(OUT_DIR, 'index.html')}`);
+  // Generate index page (only in HTML mode)
+  if (opts.format !== 'pdf') {
+    const indexHtml = generateIndexHTML(opts.levels, byLevel);
+    writeFileSync(join(OUT_DIR, 'index.html'), indexHtml, 'utf-8');
+    console.log(`📚 ${join(OUT_DIR, 'index.html')}`);
+  }
 }
 
 function generateIndexHTML(levels, byLevel) {
@@ -978,6 +1199,20 @@ function generateIndexHTML(levels, byLevel) {
     if (!entries) return '';
     const c = HSK_LEVEL_COLORS[l];
     const labels = { 1: 'Foundation', 2: 'Building Blocks', 3: 'Growing', 4: 'Expanding', 5: 'Advancing', 6: 'Proficiency', 7: 'Mastery' };
+    // For level 7, link to sub-books
+    if (l >= 7) {
+      const subBooks = splitIntoSubBooks(entries, l);
+      return subBooks.map((sub, i) => {
+        const fileName = `hsk-level-${l}${sub.suffix}`;
+        return `
+      <a href="${fileName}.html" class="level-card" style="--accent:${c.hex}">
+        <span class="lc-badge" style="background:${c.hex}">HSK 7-9 ${POS_LABELS[sub.suffix.replace(/^-/, '')] || sub.suffix.replace(/^-/, '') || 'Other'}</span>
+        <h3>${labels[l]}</h3>
+        <p>${sub.entries.length} words</p>
+        <span class="lc-arrow">→</span>
+      </a>`;
+      }).join('\n');
+    }
     return `
       <a href="hsk-level-${l}.html" class="level-card" style="--accent:${c.hex}">
         <span class="lc-badge" style="background:${c.hex}">HSK ${l}</span>
